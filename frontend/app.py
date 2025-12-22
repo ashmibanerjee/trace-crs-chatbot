@@ -23,7 +23,7 @@ async def on_chat_start():
         session_id = str(uuid.uuid4())
         cl.user_session.set("id", session_id)
     
-    # Simple welcome message
+    # Welcome message with sample queries
     welcome_message = """# Welcome to Sustainable Tourism Assistant! 🌍✨
 
 I'm here to help you discover eco-friendly travel destinations.
@@ -34,12 +34,38 @@ I can help you with:
 - 🏆 Learning about eco-certifications
 - 💚 Planning environmentally responsible trips
 
-**Where would you like to go?**
+**Try one of these examples or ask your own question:**
 """
+    
+    # Create action buttons for sample queries with custom styling
+    actions = [
+        cl.Action(
+            name="sample_query_1",
+            payload={"query": "Find a low-budget, walkable city in Europe with unusual museums or a hidden, alternative nightlife scene."},
+            label="🎨 Budget-friendly European city with unique culture",
+            description="Low-budget, walkable, unusual museums, alternative nightlife",
+            style={"background-color": "#6366f1", "color": "white", "border-radius": "8px", "padding": "12px 24px", "font-weight": "500"}
+        ),
+        cl.Action(
+            name="sample_query_2",
+            payload={"query": "Quiet European coastal city with good air quality, affordable, not touristy, with interesting nightlife options."},
+            label="🌊 Quiet coastal city with great air quality",
+            description="Coastal, affordable, good air, non-touristy, nightlife",
+            style={"background-color": "#10b981", "color": "white", "border-radius": "8px", "padding": "12px 24px", "font-weight": "500"}
+        ),
+        cl.Action(
+            name="sample_query_3",
+            payload={"query": "Best European cities for unique, artistic experiences and independent cinema, avoiding mainstream tourist attractions?"},
+            label="🎬 Artistic city with independent cinema",
+            description="Artistic experiences, indie cinema, off-the-beaten-path",
+            style={"background-color": "#f59e0b", "color": "white", "border-radius": "8px", "padding": "12px 24px", "font-weight": "500"}
+        )
+    ]
     
     await cl.Message(
         content=welcome_message,
-        author="Assistant"
+        author="Assistant",
+        actions=actions
     ).send()
 
 
@@ -236,6 +262,42 @@ async def on_more_info(action: cl.Action):
         content=response['text'],
         author="Assistant"
     ).send()
+
+
+@cl.action_callback("sample_query_1")
+async def on_sample_query_1(action: cl.Action):
+    """Handle sample query 1 button click"""
+    query = action.payload["query"]
+    
+    # Create a user message programmatically by emulating on_message behavior
+    # We'll just call on_message with a Message object
+    msg = cl.Message(content=query)
+    msg.author = "User"  # Set author explicitly
+    await on_message(msg)
+
+
+@cl.action_callback("sample_query_2")
+async def on_sample_query_2(action: cl.Action):
+    """Handle sample query 2 button click"""
+    query = action.payload["query"]
+    
+    # Create a user message programmatically by emulating on_message behavior
+    # We'll just call on_message with a Message object
+    msg = cl.Message(content=query)
+    msg.author = "User"  # Set author explicitly
+    await on_message(msg)
+
+
+@cl.action_callback("sample_query_3")
+async def on_sample_query_3(action: cl.Action):
+    """Handle sample query 3 button click"""
+    query = action.payload["query"]
+    
+    # Create a user message programmatically by emulating on_message behavior
+    # We'll just call on_message with a Message object
+    msg = cl.Message(content=query)
+    msg.author = "User"  # Set author explicitly
+    await on_message(msg)
 
 
 # ============================================================================
