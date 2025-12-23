@@ -4,7 +4,10 @@ from typing import Optional
 from google.genai import types
 from google.adk.sessions import InMemorySessionService
 import asyncio
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 APP_NAME = "crs-chat_app"
 USER_ID = "user_1"
