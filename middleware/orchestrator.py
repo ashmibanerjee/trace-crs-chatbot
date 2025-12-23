@@ -3,25 +3,11 @@ Orchestrator Middleware
 Connects Chainlit frontend to backend agents
 """
 from typing import Dict, Any, List, Optional
-import asyncio
 from datetime import datetime
+import httpx
 from config import settings
-from backend import MinimalBackend, AgentResponse
 from database.config import get_session_store, get_conversation_store
-
-
-class UIElement:
-    """Represents a UI element for Chainlit"""
-    
-    def __init__(self, element_type: str, data: Dict[str, Any]):
-        self.type = element_type
-        self.data = data
-    
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            'type': self.type,
-            'data': self.data
-        }
+from middleware.clarification_handler import ClarificationHandler, ClarificationState
 
 
 class SessionManager:
@@ -91,15 +77,15 @@ class ConversationOrchestrator:
     Main orchestrator that connects frontend to backend.
     This is the middleware layer that can be easily extended.
     """
-    
+
     def __init__(self):
         """
         Initialize orchestrator with Firestore storage
         Credentials read from .env file
         """
-        self.backend = MinimalBackend()
         self.session_manager = SessionManager()
-        
+        self.clarification_handler = ClarificationHandler()
+
         # Initialize Firestore conversation store from .env
         self.conversation_store = get_conversation_store()
     
@@ -110,142 +96,80 @@ class ConversationOrchestrator:
         user_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Main orchestration logic.
-        
+        Main orchestration logic for processing user messages.
+        Currently focused on clarification flow handling.
+
         Args:
             message: User message text
             session_id: Unique session identifier
             user_context: Additional context from the UI
-            
+
         Returns:
             Dictionary with formatted response for Chainlit
         """
-        
-        # 1. Get or create session
+
+        # Get or create session
         session_state = await self.session_manager.get_or_create_session(session_id)
-        
-        # 2. Merge user context if provided
+
+        # Merge user context if provided
         if user_context:
             session_state['metadata'].update(user_context)
-        
-        # 3. Pre-process message
-        processed_message = self._preprocess_message(message, session_state)
-        
-        # 4. Call backend agents
-        try:
-            agent_response = await self.backend.process_message(
-                message=processed_message,
-                session_state=session_state
-            )
-        except Exception as e:
-            return self._create_error_response(str(e))
-        
-        # 5. Post-process for Chainlit UI
-        ui_response = self._format_for_chainlit(agent_response, session_state)
-        
-        # 6. Update session in database
-        await self.session_manager.update_session(session_id, session_state)
-        await self.session_manager.trim_history(session_id)
-        
-        # 7. Save conversation to conversation store (for training data)
-        await self._save_conversation(session_id, session_state)
-        
-        return ui_response
-    
-    def _preprocess_message(
-        self,
-        message: str,
-        session_state: Dict[str, Any]
-    ) -> str:
-        """Pre-process user message"""
-        
-        # Clean message
-        message = message.strip()
-        
-        # Add context awareness (future enhancement)
-        # For now, just return the message
-        return message
-    
-    def _format_for_chainlit(
-        self,
-        agent_response: AgentResponse,
-        session_state: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Convert agent response to Chainlit-compatible format.
-        This is where we create UI elements.
-        """
-        
-        response = {
-            'text': agent_response.text,
+
+        # Check if there's an active clarification flow
+        if self.is_clarification_active(session_state):
+            return await self.handle_clarification_answer(message, session_id)
+
+        # Check if we should trigger clarification questions
+        if self.should_trigger_clarification(message, session_state):
+            return await self.start_clarification_flow(message, session_id)
+
+        # For non-clarification messages, return a simple acknowledgment
+        # TODO: Integrate with backend recommendation agents
+        return {
+            'text': "Thank you for your message. Recommendation system integration coming soon.",
             'elements': [],
             'actions': [],
-            'metadata': agent_response.metadata
+            'metadata': {}
         }
-        
-        # Add recommendation cards
-        if agent_response.recommendations:
-            response['elements'].extend(
-                self._create_recommendation_cards(agent_response.recommendations)
-            )
-        
-        # Add clarification options
-        if agent_response.requires_clarification:
-            response['actions'].extend(
-                self._create_quick_replies(agent_response.clarification_options)
-            )
-        
-        # Add session info (for debugging)
-        if settings.debug:
-            response['debug_info'] = {
-                'agent_name': agent_response.agent_name,
-                'action': agent_response.action,
-                'session_entities': session_state.get('collected_entities', {})
-            }
-        
-        return response
     
-    def _create_recommendation_cards(
+    def _add_to_history(
         self,
-        recommendations: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Create UI cards for recommendations"""
-        
-        cards = []
-        for rec in recommendations:
-            card = {
-                'type': 'card',
-                'data': {
-                    'id': rec['id'],
-                    'title': rec['name'],
-                    'description': rec['description'],
-                    'sustainability_score': rec.get('sustainability_score', 0),
-                    'carbon_offset': rec.get('carbon_offset', 'N/A'),
-                    'certifications': rec.get('certifications', []),
-                    'image_url': rec.get('image_url')
-                }
-            }
-            cards.append(card)
-        
-        return cards
-    
-    def _create_quick_replies(
+        session_state: Dict[str, Any],
+        role: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Helper to add a message to conversation history
+
+        Args:
+            session_state: Current session state
+            role: 'user' or 'assistant'
+            content: Message content
+            metadata: Optional metadata for the message
+        """
+        entry = {
+            'role': role,
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'metadata': metadata or {}
+        }
+        session_state['conversation_history'].append(entry)
+
+    async def _update_and_save_session(
         self,
-        options: List[str]
-    ) -> List[Dict[str, Any]]:
-        """Create quick reply buttons"""
-        
-        actions = []
-        for option in options:
-            actions.append({
-                'type': 'button',
-                'data': {
-                    'label': option,
-                    'value': option
-                }
-            })
-        
-        return actions
+        session_id: str,
+        session_state: Dict[str, Any]
+    ):
+        """
+        Helper to update session and save to conversation store
+
+        Args:
+            session_id: Session identifier
+            session_state: Current session state
+        """
+        await self.session_manager.update_session(session_id, session_state)
+        await self._save_conversation(session_id, session_state)
     
     def _create_error_response(self, error_message: str) -> Dict[str, Any]:
         """Create error response"""
@@ -265,26 +189,22 @@ class ConversationOrchestrator:
     ) -> Dict[str, Any]:
         """
         Handle user actions (button clicks, etc.)
+
+        Args:
+            action_name: Type of action
+            action_value: Action payload
+            session_id: Session identifier
+
+        Returns:
+            Response dictionary
         """
-        
-        session_state = await self.session_manager.get_or_create_session(session_id)
-        
-        # Handle different action types
         if action_name == "quick_reply":
             # Treat quick reply as a new message
             return await self.process_message(
                 message=str(action_value),
                 session_id=session_id
             )
-        
-        elif action_name == "more_info":
-            # Request more information about a recommendation
-            return {
-                'text': f"Here's more information about {action_value}...",
-                'elements': [],
-                'actions': []
-            }
-        
+
         elif action_name == "reset":
             # Reset conversation
             await self.session_manager.clear_session(session_id)
@@ -293,38 +213,13 @@ class ConversationOrchestrator:
                 'elements': [],
                 'actions': []
             }
-        
+
         else:
             return {
                 'text': f"Action '{action_name}' received.",
                 'elements': [],
                 'actions': []
             }
-    
-    async def stream_response(
-        self,
-        message: str,
-        session_id: str
-    ):
-        """
-        Stream response tokens (for future streaming support)
-        
-        Yields:
-            Text chunks for streaming display
-        """
-        
-        # For now, just yield the full response
-        # Later, this can be enhanced with actual streaming from LLM
-        response = await self.process_message(message, session_id)
-        
-        # Simulate streaming by chunking
-        text = response['text']
-        chunk_size = 10
-        
-        for i in range(0, len(text), chunk_size):
-            chunk = text[i:i + chunk_size]
-            yield chunk
-            await asyncio.sleep(0.05)  # Simulate network delay
     
     async def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get session information from database"""
@@ -347,17 +242,48 @@ class ConversationOrchestrator:
             # Check if conversation already exists
             existing = await self.conversation_store.get_conversation(session_id)
             
+            # Prepare clarification data in ADK format if available
+            clarification_data = None
+            clarification_state_dict = session_state.get('clarification_state')
+            if clarification_state_dict:
+                # Convert to ADK format: {query, clarifying_questions: [{id, category, question, answer}]}
+                clarification_data = {
+                    'query': clarification_state_dict.get('original_query', ''),
+                    'clarifying_questions': clarification_state_dict.get('questions', [])
+                }
+            elif session_state.get('clarification_complete'):
+                # If clarification is complete, reconstruct from collected answers
+                answers = session_state.get('collected_entities', {}).get('clarification_answers', {})
+                if answers:
+                    # Reconstruct the full structure with answers
+                    questions_with_answers = []
+                    for q_id_str, ans_data in sorted(answers.items(), key=lambda x: int(x[0])):
+                        questions_with_answers.append({
+                            'id': int(q_id_str),
+                            'category': ans_data.get('category', ''),
+                            'question': ans_data.get('question', ''),
+                            'answer': ans_data.get('answer', '')
+                        })
+                    
+                    clarification_data = {
+                        'query': session_state.get('metadata', {}).get('original_clarification_query', ''),
+                        'clarifying_questions': questions_with_answers
+                    }
+            
+            update_data = {
+                'conversation_history': session_state['conversation_history'],
+                'user_type': session_state.get('user_type', 'unknown'),
+                'user_type_confidence': session_state.get('user_type_confidence', 0.0),
+                'metadata': session_state.get('metadata', {})
+            }
+            
+            # Add clarification data if available
+            if clarification_data:
+                update_data['clarification_data'] = clarification_data
+            
             if existing:
                 # Update existing conversation with new messages
-                await self.conversation_store.update_conversation(
-                    session_id,
-                    {
-                        'conversation_history': session_state['conversation_history'],
-                        'user_type': session_state.get('user_type', 'unknown'),
-                        'user_type_confidence': session_state.get('user_type_confidence', 0.0),
-                        'metadata': session_state.get('metadata', {})
-                    }
-                )
+                await self.conversation_store.update_conversation(session_id, update_data)
             else:
                 # Create new conversation record
                 conversation_data = {
@@ -367,6 +293,9 @@ class ConversationOrchestrator:
                     'metadata': session_state.get('metadata', {}),
                     'preferences': session_state.get('preferences', {})
                 }
+                if clarification_data:
+                    conversation_data['clarification_data'] = clarification_data
+                    
                 await self.conversation_store.create_conversation(session_id, conversation_data)
                 
         except Exception as e:
@@ -374,33 +303,202 @@ class ConversationOrchestrator:
             import logging
             logging.error(f"Error saving conversation {session_id}: {e}")
     
-    async def export_conversations_for_training(
+    async def start_clarification_flow(
         self,
-        output_format: str = 'jsonl',
-        filters: Optional[Dict[str, Any]] = None,
-        limit: int = 10000
-    ) -> List[Dict[str, Any]]:
+        query: str,
+        session_id: str
+    ) -> Dict[str, Any]:
         """
-        Export conversations for model training
+        Start a new clarification question flow
         
         Args:
-            output_format: 'jsonl', 'qa_pairs', or 'full'
-            filters: Optional filters (e.g., {'user_type': 'sustainability_focused'})
-            limit: Maximum conversations to export
+            query: User's original query
+            session_id: Session identifier
             
         Returns:
-            List of formatted conversations
+            Formatted response with first question or error
         """
-        return await self.conversation_store.export_for_training(
-            output_format=output_format,
-            filters=filters,
-            limit=limit
-        )
-    
-    async def get_conversation_statistics(self) -> Dict[str, Any]:
-        """Get statistics about stored conversations"""
-        return await self.conversation_store.get_statistics()
+        session_state = await self.session_manager.get_or_create_session(session_id)
+        
+        # Generate clarifying questions
+        clarification_state = await self.clarification_handler.generate_questions(query)
+        
+        if not clarification_state:
+            # No questions generated or error occurred
+            return self.clarification_handler.format_error(
+                "Could not generate clarifying questions"
+            )
+        
+        # Store clarification state in session
+        session_state['clarification_state'] = clarification_state.to_dict()
+        session_state['metadata']['clarification_count'] = session_state['metadata'].get('clarification_count', 0) + 1
+        session_state['metadata']['clarification_started_at'] = datetime.now().isoformat()
+        session_state['metadata']['original_clarification_query'] = query
 
+        # Add to conversation history
+        self._add_to_history(
+            session_state,
+            role='user',
+            content=query,
+            metadata={
+                'type': 'clarification_trigger',
+                'total_questions': len(clarification_state.questions)
+            }
+        )
+
+        await self._update_and_save_session(session_id, session_state)
+        
+        # Return first question
+        return self.clarification_handler.format_question_for_ui(clarification_state)
+    
+    async def handle_clarification_answer(
+        self,
+        answer: str,
+        session_id: str
+    ) -> Dict[str, Any]:
+        """
+        Handle user's answer to a clarification question
+        
+        Args:
+            answer: User's answer text
+            session_id: Session identifier
+            
+        Returns:
+            Formatted response with next question or completion
+        """
+        session_state = await self.session_manager.get_or_create_session(session_id)
+        
+        # Get clarification state from session
+        state_dict = session_state.get('clarification_state')
+        if not state_dict:
+            return self._create_error_response("No active clarification flow found")
+        
+        # Restore state
+        clarification_state = ClarificationState.from_dict(state_dict)
+        
+        # Get current question and record answer
+        current_question = clarification_state.get_current_question()
+        if not current_question:
+            return self._create_error_response("No current question found")
+        
+        clarification_state.add_answer(current_question['id'], answer)
+        
+        # Update session with new state
+        session_state['clarification_state'] = clarification_state.to_dict()
+        
+        # Add to collected entities for backend use (use string keys for Firestore)
+        if 'clarification_answers' not in session_state['collected_entities']:
+            session_state['collected_entities']['clarification_answers'] = {}
+
+        question_id_str = str(current_question['id'])
+        session_state['collected_entities']['clarification_answers'][question_id_str] = {
+            'question': current_question['question'],
+            'category': current_question['category'],
+            'answer': answer
+        }
+
+        # Add Q&A to conversation history
+        qa_metadata = {
+            'type': 'clarification_question',
+            'question_id': current_question['id'],
+            'category': current_question['category']
+        }
+        self._add_to_history(session_state, 'assistant', current_question['question'], qa_metadata)
+
+        answer_metadata = {
+            'type': 'clarification_answer',
+            'question_id': current_question['id'],
+            'category': current_question['category']
+        }
+        self._add_to_history(session_state, 'user', answer, answer_metadata)
+
+        await self._update_and_save_session(session_id, session_state)
+        
+        # Check if complete or return next question
+        if clarification_state.is_complete():
+            # Clear clarification state and mark as complete
+            session_state['clarification_state'] = None
+            session_state['clarification_complete'] = True
+            session_state['metadata']['clarification_completed_at'] = datetime.now().isoformat()
+            session_state['metadata']['total_clarification_answers'] = len(clarification_state.answers)
+
+            await self._update_and_save_session(session_id, session_state)
+
+            response = self.clarification_handler.format_question_for_ui(clarification_state)
+            response['summary'] = clarification_state.get_summary()
+            return response
+        else:
+            # Return next question
+            return self.clarification_handler.format_question_for_ui(clarification_state)
+    
+    async def get_clarification_summary(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get summary of clarification answers
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            Summary dictionary or None if no clarification data
+        """
+        session_state = await self.session_manager.get_or_create_session(session_id)
+        
+        state_dict = session_state.get('clarification_state')
+        if not state_dict:
+            # Check if there's completed clarification data in collected_entities
+            return session_state.get('collected_entities', {}).get('clarification_answers')
+        
+        clarification_state = ClarificationState.from_dict(state_dict)
+        return clarification_state.get_summary()
+    
+    def is_clarification_active(self, session_state: Dict[str, Any]) -> bool:
+        """
+        Check if there's an active clarification flow
+        
+        Args:
+            session_state: Current session state
+            
+        Returns:
+            True if clarification is in progress
+        """
+        state_dict = session_state.get('clarification_state')
+        if not state_dict:
+            return False
+        
+        clarification_state = ClarificationState.from_dict(state_dict)
+        return not clarification_state.is_complete()
+    
+    def should_trigger_clarification(self, message: str, session_state: Dict[str, Any]) -> bool:
+        """
+        Determine if a query should trigger clarification questions
+        
+        Args:
+            message: User message
+            session_state: Current session state
+            
+        Returns:
+            True if clarification should be triggered
+        """
+        # Don't trigger if clarification was already completed or is active
+        if session_state.get('clarification_complete'):
+            return False
+        
+        if self.is_clarification_active(session_state):
+            return False
+        
+        # Check if this is the first real query (after welcome message)
+        history = session_state.get('conversation_history', [])
+        user_messages = [h for h in history if h.get('role') == 'user']
+        
+        # Trigger clarification on first substantive query
+        # Skip very short messages or greetings
+        if len(user_messages) == 0 and len(message.strip()) > 10:
+            # Check if it looks like a destination request
+            destination_keywords = ['find', 'suggest', 'recommend', 'looking for', 'want to', 'travel', 'visit', 'trip', 'europe', 'city', 'place']
+            message_lower = message.lower()
+            return any(keyword in message_lower for keyword in destination_keywords)
+        
+        return False
 
 
 # Singleton instance
