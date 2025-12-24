@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     firebase_project_name: Optional[str] = None
     firebase_project_id: Optional[str] = None
     firebase_project_number: Optional[str] = None
-    google_application_credentials: Optional[str] = None
+    firebase_google_application_credentials: Optional[str] = None
     
     # Google Cloud (fallback)
     google_cloud_project: Optional[str] = None
@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Orchestrator
     session_timeout: int = 3600
     max_conversation_history: int = 20
+
+    # Backend API
+    backend_api_url: str = "http://localhost:8001"
     
     class Config:
         env_file = ".env"

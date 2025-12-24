@@ -222,5 +222,5 @@ crs-chatbot-application-secret.json
 venv/
 .idea/
 backend/adk/.adk/
-backend/adk/coordinator/.adk/
+backend/adk/assembly/.adk/
 backend/prompts/.adk/

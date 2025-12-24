@@ -19,7 +19,7 @@ def get_session_store(backend: Optional[str] = None) -> SessionStore:
     from config import settings
     
     project_id = settings.firebase_project_id or settings.google_cloud_project
-    credentials_path = settings.google_application_credentials
+    credentials_path = settings.firebase_google_application_credentials
     
     if not project_id:
         raise ValueError(
@@ -45,7 +45,7 @@ def get_conversation_store():
     from config import settings
     
     project_id = settings.firebase_project_id or settings.google_cloud_project
-    credentials_path = settings.google_application_credentials
+    credentials_path = settings.firebase_google_application_credentials
     
     if not project_id:
         raise ValueError(

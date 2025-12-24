@@ -1,17 +1,15 @@
 from google.adk.agents.llm_agent import Agent
 from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
-from pydantic import BaseModel
-
+import os
 load_dotenv()
 
-PROMPT_DIR = "../../../prompts/"
+PROMPT_DIR = os.path.join(os.path.dirname(__file__), "../../../prompts/")
 ENV = Environment(loader=FileSystemLoader(PROMPT_DIR))
 
-class RecBaselineOutput(BaseModel):
-    query: str
-    city: str
-    explanation: str
+
+from backend.schema.schema import RecBaselineOutput
+
 
 async def get_rec_baseline():
     rec_template = ENV.get_template("rec_baseline.jinja2")
