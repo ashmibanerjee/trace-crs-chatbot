@@ -48,6 +48,7 @@ Ask questions that help refine eco-consciousness or openness to alternatives:
 - willingness for less crowded cities
 - openness to off-season / shoulder-season travel
 - preference for sustainable transport (train over flight)
+- through these questions, try to identify if the user is willing to compromise or is flexible about other travel aspects (like budget, interests, connectivity, etc.) in order to travel to a more sustainable destination. For example, try to identify if the user is willing to pay a little more in order to travel to a sustainable destination. This would make them flexible on budget. If the user's budget for the holiday is fixed, then try to identify what other factors (like interests or connectivity) they might be more flexible about. 
 
 ===========================
 
@@ -60,6 +61,7 @@ uncertainty.
 not apply to this query, skip it.
 - Order questions by importance: Preference → Topic → Disambiguation →
 Comparison & Sustainability.
+- Make sure AT LEAST ONE question related to understanding the user's willingness for sustainable travel is generated.
 - Prioritize questions that gather only the missing attributes required
 for the final recommendation generation.
 If the user query already provides certain details, do not
@@ -69,5 +71,5 @@ ask about them again.
 TASK
 ===========================
 
-Given the user query below, generate 4–7 clarifying questions
-following the taxonomy above.
+Given the user query below, generate 3–7 clarifying questions
+following the taxonomy above. Try to keep the number of questions generated to a minimum so that the user experience is not negatively impacted. Only ask the maximum number (7) of questions when there is little to no information provided in the user's initial query.
