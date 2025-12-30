@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException
 
+from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.rec_baseline.agent import get_rec_baseline
 from backend.adk.assembly.run import call_agent_async
-from backend.schema.schema import CQOutput, RecBaselineOutput
+from backend.schema.schema import CQOutput, RecBaselineOutput, IntentClassificationOutput
 from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_questions
 import json
+from utils.firestore_utils import ingest_response_firestore
 # Create a router for user endpoints
 router = APIRouter(tags=["ADK Endpoints"])
 
@@ -35,4 +37,48 @@ async def get_rec_baseline_response(user_input: str):
         return response
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/intent-classifier", response_model=IntentClassificationOutput)
+async def get_intent_classifier_response(session_id: str):
+    """
+    Intent classifier endpoint that retrieves clarification data from Firestore
+
+    Args:
+        session_id: Session identifier to retrieve conversation with clarification data
+
+    Returns:
+        Intent classification result including user persona, travel intent, and compromises
+    """
+    try:
+        print(f"[Intent Classifier API] Received request for session_id: {session_id}")
+
+        # Initialize agent with callback
+        model_init = await get_ic_agent()
+
+        # Call agent with session_id embedded in query
+        # The callback will extract session_id and retrieve clarification data
+        agent_name, response = await call_agent_async(
+            query=f"[SESSION_ID:{session_id}]",
+            root_agent=model_init,
+            session_id=session_id
+        )
+
+        response = json.loads(response)
+        response['session_id'] = session_id
+
+        print(f"[Intent Classifier API] Successfully classified intent for session {session_id}")
+        ingestion_success = await ingest_response_firestore('intent_classifier_responses', session_id, response)
+        if ingestion_success:
+            print(f"[Intent Classifier API] Successfully ingested response for session {session_id}")
+        else:
+            print(f"[Intent Classifier API] Warning: Failed to ingest response for session {session_id}")
+
+        response['db_ingestion_success'] = ingestion_success
+        response_obj = IntentClassificationOutput(**response)
+        return response_obj
+
+    except Exception as e:
+        print(f"[Intent Classifier API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
