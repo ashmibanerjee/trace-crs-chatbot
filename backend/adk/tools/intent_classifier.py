@@ -3,30 +3,7 @@ from google.genai import types
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmResponse, LlmRequest
 
-from utils.firestore_utils import get_firestore_client
-
-
-def _format_clarification_as_text(clarification_data: dict) -> str:
-    """
-    Format clarification data as readable text for injection into LLM request.
-    
-    Args:
-        clarification_data: Dict with 'query' and 'clarifying_questions'
-        
-    Returns:
-        Formatted string representation
-    """
-    query = clarification_data.get('query', '')
-    questions = clarification_data.get('clarifying_questions', [])
-
-    formatted = f"User's Original Query: {query}\n\n"
-    formatted += "Clarifying Questions and Answers:\n"
-
-    for q in questions:
-        formatted += f"\nQ{q['id']} [{q['category']}]: {q['question']}\n"
-        formatted += f"Answer: {q.get('answer', 'No answer provided')}\n"
-
-    return formatted
+from backend.adk.tools.utils import inject_to_llm_request, format_clarification_as_text, get_firestore_document
 
 
 def check_clarification_status_callback(
@@ -49,24 +26,16 @@ def check_clarification_status_callback(
     print(f"[Callback] Checking Firestore for session: {session_id}")
 
     try:
-        # 1. Get Firestore client with credentials from .env
-        db = get_firestore_client()
+        # 1. Retrieve conversation document from Firestore
+        doc, error_response = get_firestore_document(
+            collection_name='conversations',
+            session_id=session_id,
+            error_message="Error: Conversation not found. Please complete clarification first.",
+            log_prefix="[Callback]"
+        )
 
-        # 2. Synchronously retrieve the conversation document
-        doc_ref = db.collection('conversations').document(session_id)
-        doc_snapshot = doc_ref.get()
-
-        if not doc_snapshot.exists:
-            print(f"[Callback] Conversation {session_id} not found in Firestore. Blocking.")
-            return LlmResponse(
-                content=types.Content(
-                    role="model",
-                    parts=[types.Part(text="Error: Conversation not found. Please complete clarification first.")]
-                )
-            )
-
-        # Convert to dict
-        doc = doc_snapshot.to_dict()
+        if error_response:
+            return error_response
 
         # 3. Check the flag (nested in clarification_data)
         clarification_data_raw = doc.get('clarification_data', {})
@@ -89,36 +58,24 @@ def check_clarification_status_callback(
             return None  # Proceed without injection
 
         # 6. Format clarification data as text
-        clarification_text = _format_clarification_as_text(clarification_data_raw)
+        clarification_text = format_clarification_as_text(clarification_data_raw)
 
-        # 7. Inject into the LLM request
-        if llm_request.contents and len(llm_request.contents) > 0:
-            # Find the last user message
-            for content in reversed(llm_request.contents):
-                if content.role == 'user':
-                    # Prepend clarification data to the existing user message
-                    clarification_part = types.Part(text=clarification_text)
-
-                    # Insert at the beginning of the parts list
-                    if content.parts:
-                        content.parts.insert(0, clarification_part)
-                    else:
-                        content.parts = [clarification_part]
-
-                    print(f"[Callback] Injected clarification data into user message.")
-                    break
+        inject_to_llm_request(clarification_text, llm_request) # in-place modification happens
 
         print("[Callback] Proceeding to Model with injected clarification data.")
         return None  # Proceed with modified LLM call
 
     except Exception as e:
-        print(f"[Callback] Error checking clarification status: {e}")
+        # Note: Firestore errors are already handled by get_firestore_document()
+        # This catches any other unexpected errors in the callback logic
+        print(f"[Callback] Error in callback logic: {e}")
         import traceback
         traceback.print_exc()
-        # Fail safe: Block execution if DB fails
         return LlmResponse(
             content=types.Content(
                 role="model",
                 parts=[types.Part(text=f"Error checking clarification status: {str(e)}")]
             )
         )
+
+

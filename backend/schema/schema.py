@@ -1,6 +1,5 @@
-from typing import Literal, Optional, List
-
-from pydantic import BaseModel, Field
+from typing import Literal, Optional, List, Union, Annotated
+from pydantic import BaseModel, Field, constr
 
 
 class ClarifyingQuestion(BaseModel):
@@ -26,12 +25,6 @@ class CQOutput(BaseModel):
     )
 
 
-class RecBaselineOutput(BaseModel):
-    query: str
-    city: str
-    explanation: str
-
-
 class InputContext(BaseModel):
     """
     Represents one interaction block containing the query and associated Q&A.
@@ -45,6 +38,36 @@ class InputContext(BaseModel):
         ...,
         alias="clarified Q&A",
         description="List of clarifying questions and answers associated with this query."
+    )
+
+
+class RecsysOutput(BaseModel):
+    session_id: str = Field(
+        ...,
+        description="Unique identifier for the recommendation session"
+    )
+    user_query: str = Field(..., description="The original user query")
+    context: Optional[List[InputContext]] = Field(
+        None,
+        description="List of user queries with their associated clarifying questions and answers"
+    )
+    recommendation: Union[str, List[str]] = Field(
+        ...,
+        description="Recommended city or list of cities if explicitly requested"
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Brief justification of why the recommendation fits"
+    )
+
+    trade_off: Optional[str] = Field(
+        None,
+        description="Brief description of any trade-offs made, if applicable"
+    )
+    db_ingestion_status: bool = Field(
+        default=False,
+        description="Status indicating whether the recommendation response was successfully ingested into the database."
     )
 
 

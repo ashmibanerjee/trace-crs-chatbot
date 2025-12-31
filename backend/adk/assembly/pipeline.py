@@ -8,7 +8,7 @@ _file_dir = os.path.dirname(__file__)  # backend/agents/coordinator
 _project_root = os.path.abspath(os.path.join(_file_dir, "..", ".."))  # project root that contains `backend`
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
-from backend.adk.agents.rec_baseline.agent import get_rec_baseline
+from backend.adk.agents.recsys.agent import get_rec_baseline
 from backend.adk.agents.clar_q_gen.agent import get_cq_agent
 
 cq_agent = get_cq_agent()

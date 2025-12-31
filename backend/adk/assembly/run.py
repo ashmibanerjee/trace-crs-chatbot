@@ -49,5 +49,6 @@ async def call_agent_async(query: str, root_agent: Agent = None, session_id: str
         if event.is_final_response():
             final_response = event.content.parts[0].text
             return event.author, final_response
+    return None
 
 

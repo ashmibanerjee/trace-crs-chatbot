@@ -1,18 +1,19 @@
 from fastapi import APIRouter, HTTPException
 
 from backend.adk.agents.intent_classification.agent import get_ic_agent
-from backend.adk.agents.rec_baseline.agent import get_rec_baseline
+from backend.adk.agents.recsys.agent import get_recsys_agent
 from backend.adk.assembly.run import call_agent_async
-from backend.schema.schema import CQOutput, RecBaselineOutput, IntentClassificationOutput
+from backend.schema.schema import CQOutput, RecsysOutput, IntentClassificationOutput
 from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_questions
 import json
 from utils.firestore_utils import ingest_response_firestore
+
 # Create a router for user endpoints
 router = APIRouter(tags=["ADK Endpoints"])
 
 
-@router.post("/clarify-questions-gen", response_model=CQOutput)
-async def get_clarifications(user_input: str):
+@router.post("/generate-clarifying-questions", response_model=CQOutput)
+async def get_clarifying_questions(user_input: str):
     """
     Step 1: Frontend sends query, Backend returns clarifying questions.
     """
@@ -21,20 +22,6 @@ async def get_clarifications(user_input: str):
         # Placeholder for actual agent call
         responses = await generate_clarifying_questions(user_input)
         return responses
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/rec-baseline", response_model=RecBaselineOutput)
-async def get_rec_baseline_response(user_input: str):
-    try:
-        print(f"Received user input for clarification: {user_input}")
-        # Placeholder for actual agent call
-        model_init = await get_rec_baseline()
-        agent_name, response = await call_agent_async(user_input, model_init)
-        response = json.loads(response)
-        return response
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -81,4 +68,36 @@ async def get_intent_classifier_response(session_id: str):
 
     except Exception as e:
         print(f"[Intent Classifier API] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/recommender-output", response_model=RecsysOutput)
+async def get_recommender_response(session_id: str, has_context: bool = True):
+    try:
+        print(f"[Recommender API] Received request for session_id: {session_id}")
+        if not session_id:
+            raise ValueError("Session ID is required for context-aware recommender")
+        if has_context:
+            model_init = await get_recsys_agent(has_context=True)
+            collection_name = 'context_aware_recommendations'
+        else:
+            model_init = await get_recsys_agent(has_context=False)
+            collection_name = 'baseline_recommendations'
+        agent_name, response = await call_agent_async(
+            query=f"[SESSION_ID:{session_id}]",
+            root_agent=model_init,
+            session_id=session_id
+        )
+        response = json.loads(response)
+        ingestion_success = await ingest_response_firestore(collection_name, session_id, response)
+        if ingestion_success:
+            print(f"[Recommender API] Successfully ingested response for session {session_id}")
+        else:
+            print(f"[Recommender API] Warning: Failed to ingest response for session {session_id}")
+
+        response['db_ingestion_status'] = ingestion_success
+        response_obj = RecsysOutput(**response)
+        return response_obj
+    except Exception as e:
+        print(f"[Recommender API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
