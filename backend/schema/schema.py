@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Literal, Optional, List, Union, Annotated
 from pydantic import BaseModel, Field, constr
 
@@ -47,9 +48,9 @@ class RecsysOutput(BaseModel):
         description="Unique identifier for the recommendation session"
     )
     user_query: str = Field(..., description="The original user query")
-    context: Optional[List[InputContext]] = Field(
+    context: Optional[List[IntentClassificationOutput]] = Field(
         None,
-        description="List of user queries with their associated clarifying questions and answers"
+        description="List of intent classification outputs containing user queries, clarifying Q&A, travel persona, and compromise details"
     )
     recommendation: Union[str, List[str]] = Field(
         ...,
@@ -112,4 +113,70 @@ class IntentClassificationOutput(BaseModel):
     db_ingestion_status: bool = Field(
         default=False,
         description="Status indicating whether the intent classification response was successfully ingested into the database."
+    )
+
+
+class RecommendationContext(BaseModel):
+    """
+    Represents a recommendation with its explanation and trade-offs.
+    """
+    recommendation: Union[str, List[str]] = Field(
+        ...,
+        description="Recommended city or list of cities"
+    )
+    explanation: str = Field(
+        ...,
+        description="Justification of why the recommendation fits"
+    )
+    trade_off: Optional[str] = Field(
+        None,
+        description="Description of any trade-offs made, if applicable"
+    )
+
+
+class CFEContext(BaseModel):
+    """
+    Complete context for CFE agent including intent classification and both recommendations.
+    """
+    intent_classification: Optional[IntentClassificationOutput] = Field(
+        None,
+        description="Intent classification output containing user queries, clarifying Q&A, travel persona, and compromise details"
+    )
+    baseline_recommendation: Optional[RecommendationContext] = Field(
+        None,
+        description="Baseline recommendation without context"
+    )
+    context_aware_recommendation: Optional[RecommendationContext] = Field(
+        None,
+        description="Context-aware recommendation with intent classification"
+    )
+
+
+class CFEOutput(BaseModel):
+    session_id: str = Field(
+        ...,
+        description="Unique identifier for the recommendation session"
+    )
+    user_query: str = Field(..., description="The original user query")
+    context: Optional[CFEContext] = Field(
+        None,
+        description="Complete context including intent classification, baseline and context-aware recommendations with their explanations"
+    )
+    cfe_recommendation: Union[str, List[str]] = Field(
+        ...,
+        description="Final recommended city or list of cities after CFE analysis"
+    )
+
+    cfe_explanation: str = Field(
+        ...,
+        description="Comprehensive explanation combining insights from both recommendations"
+    )
+
+    cfe_trade_off: Optional[str] = Field(
+        None,
+        description="Description of trade-offs made in the final recommendation"
+    )
+    db_ingestion_status: bool = Field(
+        default=False,
+        description="Status indicating whether the CFE response was successfully ingested into the database."
     )

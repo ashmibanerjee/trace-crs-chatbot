@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException
 
+from backend.adk.agents.cfe.agent import get_cfe_agent
 from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.recsys.agent import get_recsys_agent
 from backend.adk.assembly.run import call_agent_async
-from backend.schema.schema import CQOutput, RecsysOutput, IntentClassificationOutput
+from backend.schema.schema import CQOutput, RecsysOutput, IntentClassificationOutput, CFEOutput, CFEContext, RecommendationContext
 from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_questions
 import json
-from utils.firestore_utils import ingest_response_firestore
+from utils.firestore_utils import ingest_response_firestore, get_firestore_client
 
 # Create a router for user endpoints
 router = APIRouter(tags=["ADK Endpoints"])
@@ -100,4 +101,46 @@ async def get_recommender_response(session_id: str, has_context: bool = True):
         return response_obj
     except Exception as e:
         print(f"[Recommender API] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cfe-output", response_model=CFEOutput)
+async def get_cfe_response(session_id: str):
+    """
+    CFE (Counterfactual Explanation) endpoint that combines baseline and context-aware
+    recommendations with intent classification to generate a comprehensive explanation.
+    
+    Args:
+        session_id: Session identifier to retrieve all recommendation data
+        
+    Returns:
+        CFE output with complete context including intent classification and both recommendations
+    """
+    try:
+        print(f"[CFE API] Received request for session_id: {session_id}")
+        
+        if not session_id:
+            raise ValueError("Session ID is required for CFE generation")
+
+        model_init = await get_cfe_agent()
+        agent_name, response = await call_agent_async(
+            query=f"[SESSION_ID:{session_id}]",
+            root_agent=model_init,
+            session_id=session_id
+        )
+        response = json.loads(response)
+        ingestion_success = await ingest_response_firestore("cfe_responses", session_id, response)
+        if ingestion_success:
+            print(f"[Recommender API] Successfully ingested response for session {session_id}")
+        else:
+            print(f"[Recommender API] Warning: Failed to ingest response for session {session_id}")
+
+        response['db_ingestion_status'] = ingestion_success
+        response_obj = CFEOutput(**response)
+        return response_obj
+        
+    except Exception as e:
+        print(f"[CFE API] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
