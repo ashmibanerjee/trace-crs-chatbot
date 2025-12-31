@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from backend.adk.agents.cfe.agent import get_cfe_agent
 from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.recsys.agent import get_recsys_agent
+from backend.adk.assembly.pipeline import get_root_agent
 from backend.adk.assembly.run import call_agent_async
 from backend.schema.schema import CQOutput, RecsysOutput, IntentClassificationOutput, CFEOutput, CFEContext, RecommendationContext
 from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_questions
@@ -143,4 +144,31 @@ async def get_cfe_response(session_id: str):
         print(f"[CFE API] Error: {str(e)}")
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/run-pipeline", response_model=CFEOutput)
+async def run_pipeline(session_id: str):
+    try:
+        print(f"[Pipeline API] Received request for session_id: {session_id}")
+        model_init = await get_root_agent()
+        agent_name, response = await call_agent_async(
+            query=f"[SESSION_ID:{session_id}]",
+            root_agent=model_init,
+            session_id=session_id
+        )
+        response = json.loads(response)
+        return response
+        # TODO
+        # ingestion_success = await ingest_response_firestore("cfe__pipeline_responses", session_id, response)
+        # if ingestion_success:
+        #     print(f"[Recommender API] Successfully ingested response for session {session_id}")
+        # else:
+        #     print(f"[Recommender API] Warning: Failed to ingest response for session {session_id}")
+        #
+        # response['db_ingestion_status'] = ingestion_success
+        # response_obj = CFEOutput(**response)
+        # return response_obj
+    except Exception as e:
+        print(f"[Pipeline API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
