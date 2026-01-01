@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     google_cloud_project: Optional[str] = None
     
     # Model Settings
-    default_model: str = "gemini-2.0-flash-exp"
+    default_model: str = "gemini-2.5-flash-exp"
     
     # Chainlit
     chainlit_auth_secret: str = "change-this-secret"

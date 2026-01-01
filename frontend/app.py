@@ -3,9 +3,17 @@ Chainlit Frontend Application
 Modular UI for Sustainable Tourism CRS
 """
 import chainlit as cl
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from middleware.orchestrator import orchestrator
 from config import settings
+from frontend.helpers import (
+    get_or_create_session_id,
+    reset_session_state,
+    create_new_session,
+    save_feedback,
+    create_sample_query_actions,
+    create_rating_actions
+)
 
 
 # ============================================================================
@@ -15,86 +23,34 @@ from config import settings
 @cl.on_chat_start
 async def on_chat_start():
     """Initialize chat session"""
+    await get_or_create_session_id()
+    await reset_session_state()
 
-    # Generate session ID
-    session_id = cl.user_session.get("id")
-    if not session_id:
-        import uuid
-        session_id = str(uuid.uuid4())
-        cl.user_session.set("id", session_id)
-
-    # Initialize clarification state in user session
-    cl.user_session.set("clarification_active", False)
-    cl.user_session.set("original_query", None)
-
-    # Welcome message with sample queries
     welcome_message = """# Welcome to Sustainable Tourism Assistant! 🌍✨
 
-I'm here to help you discover eco-friendly travel destinations.
+I'm here to help you discover eco-friendly travel destinations tailored to your preferences.
 
-I can help you with:
-- 🌿 Finding sustainable destinations
-- 📊 Comparing carbon footprints  
-- 🏆 Learning about eco-certifications
-- 💚 Planning environmentally responsible trips
+### 📝 How it works:
 
-**Try one of these examples or ask your own question:**
+1. **Share your travel preferences** → Tell me what you're looking for
+2. **Answer clarifying questions** → I'll ask targeted questions to understand your needs. Please try to be as specific as possible. This helps me understand your preferences better.
+3. **Get personalized recommendations** → Receive curated suggestions based on your answers
+4. **Provide feedback** → Help us improve by rating your experience
+
+💡 *Please be patient—analysis may take a few minutes to ensure quality recommendations.*
+
+---
+
+**Ready to start? Try one of these examples or ask your own question:**
 """
 
-    # Create action buttons for sample queries with custom styling
-    actions = [
-        cl.Action(
-            name="sample_query_1",
-            payload={
-                "query": "Find a low-budget, walkable city in Europe with unusual museums or a hidden, alternative nightlife scene."},
-            label="🎨 Budget-friendly European city with unique culture",
-            description="Low-budget, walkable, unusual museums, alternative nightlife",
-            style={"background-color": "#6366f1", "color": "white", "border-radius": "8px", "padding": "12px 24px",
-                   "font-weight": "500"}
-        ),
-        cl.Action(
-            name="sample_query_2",
-            payload={
-                "query": "Quiet European coastal city with good air quality, affordable, not touristy, with interesting nightlife options."},
-            label="🌊 Quiet coastal city with great air quality",
-            description="Coastal, affordable, good air, non-touristy, nightlife",
-            style={"background-color": "#10b981", "color": "white", "border-radius": "8px", "padding": "12px 24px",
-                   "font-weight": "500"}
-        ),
-        cl.Action(
-            name="sample_query_3",
-            payload={
-                "query": "Best European cities for unique, artistic experiences and independent cinema, avoiding mainstream tourist attractions?"},
-            label="🎬 Artistic city with independent cinema",
-            description="Artistic experiences, indie cinema, off-the-beaten-path",
-            style={"background-color": "#f59e0b", "color": "white", "border-radius": "8px", "padding": "12px 24px",
-                   "font-weight": "500"}
-        ),
-        cl.Action(
-            name="ask_questions",
-            payload={"action": "clarify"},
-            label="🔍 Help me refine my search",
-            description="Answer questions to get personalized recommendations",
-            style={"background-color": "#8b5cf6", "color": "white", "border-radius": "8px", "padding": "12px 24px",
-                   "font-weight": "500"}
-        )
-    ]
+    actions = create_sample_query_actions()
 
     await cl.Message(
         content=welcome_message,
         author="Assistant",
         actions=actions
     ).send()
-
-
-# Note: on_chat_end not supported in Chainlit 1.1.0
-# @cl.on_chat_end
-# async def on_chat_end():
-#     """Clean up when chat ends"""
-#     session_id = cl.user_session.get("id")
-#     if session_id:
-#         # Could save session data here
-#         pass
 
 
 # ============================================================================
@@ -107,6 +63,49 @@ async def on_message(message: cl.Message):
 
     # Get session info
     session_id = cl.user_session.get("id")
+    
+    # Check if we're expecting feedback text
+    feedback_rating = cl.user_session.get("feedback_rating")
+    if feedback_rating and not cl.user_session.get("feedback_text_collected"):
+        # This is the feedback text
+        feedback_text = message.content.strip()
+        
+        # Mark that we've collected the text feedback
+        cl.user_session.set("feedback_text_collected", True)
+        
+        # Skip if user doesn't want to provide feedback
+        if feedback_text.lower() in ['skip', 'no', 'none', 'n/a']:
+            await save_feedback(
+                session_id=session_id,
+                rating=feedback_rating,
+                feedback_text=None
+            )
+            await cl.Message(
+                content="Thank you for your feedback! 🙏",
+                author="Assistant"
+            ).send()
+        else:
+            # Save the feedback
+            await save_feedback(
+                session_id=session_id,
+                rating=feedback_rating,
+                feedback_text=feedback_text
+            )
+            await cl.Message(
+                content="Thank you for your detailed feedback! We really appreciate it. 🙏",
+                author="Assistant"
+            ).send()
+        
+        # Clear the feedback state and create new session for next conversation
+        cl.user_session.set("feedback_rating", None)
+        await create_new_session()
+        
+        # Inform user that a new session has started
+        await cl.Message(
+            content="Feel free to start a new search! I'm ready to help you find your next destination. 🌍",
+            author="Assistant"
+        ).send()
+        return
 
     # Show processing indicator
     async with cl.Step(name="🤔 Thinking", type="tool") as step:
@@ -135,81 +134,58 @@ async def on_message(message: cl.Message):
             ).send()
             return
 
-    # Build response elements
-    elements = []
-
-    # Add recommendation cards if present
-    if response.get('elements'):
-        for element in response['elements']:
-            if element['type'] == 'card':
-                card_data = element['data']
-
-                # Create rich card display
-                card_content = f"""### {card_data['title']}
-
-{card_data['description']}
-
-**🌱 Sustainability Score:** {card_data['sustainability_score']}/10  
-**♻️ Carbon Offset:** {card_data['carbon_offset']}  
-**🏆 Certifications:** {', '.join(card_data['certifications'])}
-"""
-
-                elements.append(
-                    cl.Text(
-                        name=card_data['title'],
-                        content=card_content,
-                        display="inline"
-                    )
-                )
-
-    # Create action buttons
-    actions = []
-    if response.get('actions'):
-        for action in response['actions']:
-            if action['type'] == 'button':
-                actions.append(
-                    cl.Action(
-                        name="quick_reply",
-                        value=action['data']['value'],
-                        payload={"value": action['data']['value']},
-                        label=action['data']['label']
-                    )
-                )
-
-    # Add standard actions
-    actions.extend([
-        cl.Action(
-            name="view_history",
-            value="history",
-            payload={"action": "history"},
-            label="📜 View History"
-        ),
-        cl.Action(
-            name="reset",
-            value="reset",
-            payload={"action": "reset"},
-            label="🔄 Start Over"
-        )
-    ])
-
-    # Send response
+    # Send response (elements and actions handled by orchestrator)
     await cl.Message(
         content=response['text'],
-        elements=elements,
-        actions=actions,
         author="Assistant"
     ).send()
 
-    # Handle clarification completion
+    # Handle clarification completion and display pipeline results
     if response.get('type') == 'clarification_complete':
-        summary = await orchestrator.get_clarification_summary(session_id)
-        if summary:
+        print(f"[Frontend] Clarification complete detected!")
+        
+        # Store that clarification is complete
+        cl.user_session.set("clarification_complete", True)
+        
+        # Check if we need to trigger the pipeline
+        if response.get('trigger_pipeline'):
+            # Show processing messages
             await cl.Message(
-                content="🎯 Processing your personalized preferences...",
+                content="✨ **Analyzing your preferences... Please wait. This may take a few minutes**",
                 author="Assistant"
             ).send()
-            # Store that clarification is complete
-            cl.user_session.set("clarification_complete", True)
+            
+            # Show a step-by-step progress indicator
+            async with cl.Step(name="🧠 Understanding your travel profile", type="tool") as step:
+                step.output = "Analyzing your answers..."
+                
+                async with cl.Step(name="🔍 Finding personalized recommendations", type="tool") as step2:
+                    step2.output = "Searching for the best destinations..."
+                    
+                    async with cl.Step(name="📊 Generating explanations", type="tool") as step3:
+                        step3.output = "Creating your personalized report..."
+                        
+                        # Now run the pipeline
+                        pipeline_result = await orchestrator.call_run_pipeline(session_id)
+                        
+                        step3.output = "Complete! ✓"
+                    step2.output = "Complete! ✓"
+                step.output = "Complete! ✓"
+            
+            # Display the results
+            if pipeline_result and 'error' not in pipeline_result:
+                await display_pipeline_results(pipeline_result)
+            elif pipeline_result and 'error' in pipeline_result:
+                print(f"[Frontend] Pipeline error: {pipeline_result.get('error')}")
+                await cl.Message(
+                    content=f"⚠️ There was an issue processing your recommendations: {pipeline_result.get('error')}",
+                    author="Assistant"
+                ).send()
+            else:
+                await cl.Message(
+                    content="⚠️ Unable to generate recommendations at this time. Please try again.",
+                    author="Assistant"
+                ).send()
 
     # Show debug info if enabled
     if settings.debug and response.get('debug_info'):
@@ -221,223 +197,219 @@ async def on_message(message: cl.Message):
 
 
 # ============================================================================
+# Helper Functions
+# ============================================================================
+
+async def display_pipeline_results(pipeline_result: Dict[str, Any]):
+    """
+    Display the results from the pipeline execution
+    
+    Args:
+        pipeline_result: The CFE output from the run-pipeline endpoint
+    """
+    try:
+        # Debug: Print the pipeline result structure
+        print(f"[Frontend] Pipeline result keys: {pipeline_result.keys()}")
+        print(f"[Frontend] Pipeline result: {pipeline_result}")
+        
+        # Extract key information from the pipeline result (CFEOutput structure)
+        context = pipeline_result.get('context', {})
+        intent_classification = context.get('intent_classification') if context else None
+        
+        # Display intent classification if available
+        if intent_classification:
+            persona = intent_classification.get('user_travel_persona', 'Unknown')
+            travel_intent = intent_classification.get('travel_intent', 'Not specified')
+            
+            intent_text = f"""### 🎯 Your Travel Profile
+
+**Persona:** {persona}  
+**Travel Intent:** {travel_intent}
+"""
+            await cl.Message(
+                content=intent_text,
+                author="Assistant"
+            ).send()
+        
+        # Display the main CFE recommendation
+        cfe_recommendation = pipeline_result.get('cfe_recommendation', [])
+        cfe_explanation = pipeline_result.get('cfe_explanation', '')
+        cfe_trade_off = pipeline_result.get('cfe_trade_off')
+        
+        print(f"[Frontend] cfe_recommendation: {cfe_recommendation}")
+        print(f"[Frontend] cfe_explanation: {cfe_explanation[:100] if cfe_explanation else 'None'}...")
+        
+        if cfe_recommendation:
+            # Format recommendations
+            if isinstance(cfe_recommendation, list):
+                recs_text = ", ".join(str(r) for r in cfe_recommendation)
+            else:
+                recs_text = str(cfe_recommendation)
+            
+            recommendation_text = f"""### 🌟 Your Personalized Recommendations
+
+**Destinations:** {recs_text}
+
+**Why these recommendations?**
+{cfe_explanation}
+"""
+            
+            if cfe_trade_off:
+                recommendation_text += f"\n\n**Trade-offs:**\n{cfe_trade_off}"
+            
+            await cl.Message(
+                content=recommendation_text,
+                author="Assistant"
+            ).send()
+        else:
+            print("[Frontend] WARNING: No cfe_recommendation found in pipeline result")
+            # Show a fallback message with whatever we have
+            if cfe_explanation:
+                await cl.Message(
+                    content=f"### 🌟 Your Recommendations\n\n{cfe_explanation}",
+                    author="Assistant"
+                ).send()
+        
+        # Display comparison insights if available
+        if context:
+            baseline_rec = context.get('baseline_recommendation')
+            context_rec = context.get('context_aware_recommendation')
+            
+            if baseline_rec and context_rec:
+                comparison_text = """### 📊 Understanding Your Recommendations
+
+**Context-Aware vs Baseline Comparison:**
+"""
+                # Show how context improved recommendations
+                context_cities = context_rec.get('recommendation', [])
+                baseline_cities = baseline_rec.get('recommendation', [])
+                
+                if context_cities != baseline_cities:
+                    comparison_text += f"\nOur personalized system recommended **{context_cities if isinstance(context_cities, str) else ', '.join(context_cities)}** based on your preferences, "
+                    comparison_text += f"while a generic search might have suggested **{baseline_cities if isinstance(baseline_cities, str) else ', '.join(baseline_cities)}**.\n"
+                    
+                    if context_rec.get('explanation'):
+                        comparison_text += f"\n**Why the difference?** {context_rec['explanation']}"
+                
+                await cl.Message(
+                    content=comparison_text,
+                    author="Assistant"
+                ).send()
+        
+        # Display feedback request
+        await display_feedback_request()
+        
+    except Exception as e:
+        print(f"Error displaying pipeline results: {e}")
+        import traceback
+        traceback.print_exc()
+        await cl.Message(
+            content=f"⚠️ Error displaying recommendations: {str(e)}\n\nPlease check the logs for details.",
+            author="Assistant"
+        ).send()
+        # Still show feedback even if there was an error displaying results
+        await display_feedback_request()
+
+
+async def display_feedback_request():
+    """Display feedback request with star rating options"""
+    feedback_text = """### 💬 How did you like these recommendations?
+
+Please rate your experience and share any feedback to help us improve!"""
+
+    await cl.Message(
+        content=feedback_text,
+        actions=create_rating_actions(),
+        author="Assistant"
+    ).send()
+
+
+# ============================================================================
 # Action Handlers
 # ============================================================================
 
 @cl.action_callback("quick_reply")
 async def on_quick_reply(action: cl.Action):
     """Handle quick reply button clicks"""
-
-    # Send the action payload value as a new message
     value = action.payload.get("value", "")
+    
+    # Process the value by calling on_message
+    # Chainlit will automatically attribute the user's message in on_message
+    # but we need to display it first.
+    await cl.Message(content=value).send()
     await on_message(cl.Message(content=value))
 
 
-@cl.action_callback("view_history")
-async def on_view_history(action: cl.Action):
-    """Show conversation history"""
-
-    session_id = cl.user_session.get("id")
-    history = orchestrator.get_conversation_history(session_id)
-
-    if not history:
-        await cl.Message(
-            content="No conversation history yet.",
-            author="System"
-        ).send()
-        return
-
-    # Format history
-    history_text = "# 📜 Conversation History\n\n"
-    for i, entry in enumerate(history[-5:], 1):  # Last 5 messages
-        history_text += f"**Turn {i}:**\n"
-        history_text += f"- **You:** {entry['user']}\n"
-        history_text += f"- **Assistant:** {entry['assistant'][:100]}...\n\n"
-
-    await cl.Message(
-        content=history_text,
-        author="System"
-    ).send()
-
-
-@cl.action_callback("reset")
-async def on_reset(action: cl.Action):
-    """Reset the conversation"""
-
-    session_id = cl.user_session.get("id")
-
-    response = await orchestrator.handle_action(
-        action_name="reset",
-        action_value=None,
-        session_id=session_id
+async def handle_sample_query(query: str):
+    """Handle sample query button clicks"""
+    # Display the query in the chat
+    # To avoid the assistant logo, we should leave the author empty
+    # so Chainlit attributes it to the default user persona.
+    user_msg = cl.Message(
+        content=query,
+        author="User"
     )
+    await user_msg.send()
 
-    await cl.Message(
-        content=response['text'],
-        author="Assistant"
-    ).send()
-
-
-@cl.action_callback("more_info")
-async def on_more_info(action: cl.Action):
-    """Request more information about a recommendation"""
-
-    session_id = cl.user_session.get("id")
-
-    response = await orchestrator.handle_action(
-        action_name="more_info",
-        action_value=action.payload,
-        session_id=session_id
-    )
-
-    await cl.Message(
-        content=response['text'],
-        author="Assistant"
-    ).send()
+    # Process the query
+    await on_message(cl.Message(content=query))
 
 
 @cl.action_callback("sample_query_1")
 async def on_sample_query_1(action: cl.Action):
-    """Handle sample query 1 button click"""
-    query = action.payload["query"]
-
-    # Create a user message programmatically by emulating on_message behavior
-    # We'll just call on_message with a Message object
-    msg = cl.Message(content=query)
-    msg.author = "User"  # Set author explicitly
-    await on_message(msg)
+    """Handle sample query 1"""
+    await handle_sample_query(action.payload["query"])
 
 
 @cl.action_callback("sample_query_2")
 async def on_sample_query_2(action: cl.Action):
-    """Handle sample query 2 button click"""
-    query = action.payload["query"]
-
-    # Create a user message programmatically by emulating on_message behavior
-    # We'll just call on_message with a Message object
-    msg = cl.Message(content=query)
-    msg.author = "User"  # Set author explicitly
-    await on_message(msg)
+    """Handle sample query 2"""
+    await handle_sample_query(action.payload["query"])
 
 
 @cl.action_callback("sample_query_3")
 async def on_sample_query_3(action: cl.Action):
-    """Handle sample query 3 button click"""
-    query = action.payload["query"]
-
-    # Create a user message programmatically by emulating on_message behavior
-    # We'll just call on_message with a Message object
-    msg = cl.Message(content=query)
-    msg.author = "User"  # Set author explicitly
-    await on_message(msg)
+    """Handle sample query 3"""
+    await handle_sample_query(action.payload["query"])
 
 
-@cl.action_callback("ask_questions")
-async def on_ask_questions(action: cl.Action):
-    """Handle clarification questions button click"""
-    await cl.Message(
-        content="Great! Please tell me what you're looking for, and I'll ask some questions to help refine your search.",
-        author="Assistant"
-    ).send()
-    cl.user_session.set("trigger_clarification", True)
 
 
-@cl.action_callback("start_clarification_now")
-async def on_start_clarification(action: cl.Action):
-    """Start clarification flow with the stored query"""
+async def handle_rating_feedback(rating: int):
+    """Handle rating feedback submission"""
     session_id = cl.user_session.get("id")
-    query = action.payload.get("query")
+    cl.user_session.set("feedback_rating", rating)
 
-    if not query:
-        await cl.Message(
-            content="⚠️ No query found to clarify.",
-            author="System"
-        ).send()
-        return
-
-    # Start clarification flow
-    async with cl.Step(name="🔍 Generating questions", type="tool") as step:
-        try:
-            response = await orchestrator.start_clarification_flow(query, session_id)
-            step.output = "Questions generated successfully"
-        except Exception as e:
-            await cl.Message(
-                content=f"⚠️ Error generating questions: {str(e)}",
-                author="System"
-            ).send()
-            return
-
-    # Store state
-    cl.user_session.set("clarification_active", True)
-    cl.user_session.set("original_query", query)
-
-    # Display first question
     await cl.Message(
-        content=response['text'],
+        content=f"Thank you for rating us {'⭐' * rating} ({rating}/5)!",
+        author="Assistant"
+    ).send()
+
+    await cl.Message(
+        content="Would you like to share any additional comments? (Optional - you can skip this by typing 'skip' or just provide your feedback)",
         author="Assistant"
     ).send()
 
 
-# ============================================================================
-# Error Handling
-# ============================================================================
+# Rating action callbacks
+@cl.action_callback("rating_1")
+async def on_rating_1(action: cl.Action):
+    await handle_rating_feedback(1)
 
-# Note: on_chat_error not supported in Chainlit 1.1.0
-# Error handling is done inline in message handlers
-# @cl.on_chat_error
-# async def on_error(error: Exception):
-#     """Handle errors gracefully"""
-#     
-#     await cl.Message(
-#         content=f"⚠️ An unexpected error occurred: {str(error)}\n\nPlease refresh and try again.",
-#         author="System"
-#     ).send()
+@cl.action_callback("rating_2")
+async def on_rating_2(action: cl.Action):
+    await handle_rating_feedback(2)
 
+@cl.action_callback("rating_3")
+async def on_rating_3(action: cl.Action):
+    await handle_rating_feedback(3)
 
-# ============================================================================
-# Optional: Streaming Support (for future enhancement)
-# ============================================================================
+@cl.action_callback("rating_4")
+async def on_rating_4(action: cl.Action):
+    await handle_rating_feedback(4)
 
-# @cl.on_message
-# async def on_message_stream(message: cl.Message):
-#     """Handle messages with streaming response"""
-#     
-#     session_id = cl.user_session.get("id")
-#     
-#     msg = cl.Message(content="", author="Assistant")
-#     await msg.send()
-#     
-#     async for chunk in orchestrator.stream_response(message.content, session_id):
-#         await msg.stream_token(chunk)
-#     
-#     await msg.update()
+@cl.action_callback("rating_5")
+async def on_rating_5(action: cl.Action):
+    await handle_rating_feedback(5)
 
 
-# ============================================================================
-# Settings
-# ============================================================================
-
-# Note: password_auth_callback may not be supported in this version
-# Uncomment if needed and supported
-# @cl.password_auth_callback
-# async def auth_callback(username: str, password: str) -> Optional[cl.User]:
-#     """
-#     Optional: Add authentication
-#     Remove or modify this based on your needs
-#     """
-#     
-#     # For demo purposes, accept any username/password
-#     # In production, validate against a real user database
-#     if username and password:
-#         return cl.User(identifier=username, metadata={"role": "user"})
-#     
-#     return None
-
-
-# ============================================================================
-# Main Entry Point
-# ============================================================================
-
-if __name__ == "__main__":
-    # This will be run by: chainlit run app.py
-    pass

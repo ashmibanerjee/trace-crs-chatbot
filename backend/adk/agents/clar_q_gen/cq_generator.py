@@ -43,7 +43,11 @@ async def generate_clarifying_questions(query: str) -> CQOutput:
     cq_agent = await get_cq_agent()
 
     try:
-        agent_name, response = await _call_agent_async(query, cq_agent)
+        # Use async generator to get response
+        agent_name, response = None, None
+        async for name, text in _call_agent_async(query, cq_agent):
+            agent_name, response = name, text
+
         cq_data = json.loads(response)
         questions = [
             ClarifyingQuestion(**format_question(cq))

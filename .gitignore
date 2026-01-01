@@ -225,3 +225,4 @@ backend/adk/.adk/
 backend/adk/assembly/.adk/
 backend/prompts/.adk/
 backend/adk/agents/intent_classification/.adk/
+chainlit.md

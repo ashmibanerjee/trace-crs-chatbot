@@ -33,20 +33,8 @@ class SessionManager:
         if session is None:
             # Create new session
             session_data = {
-                'user_type': None,  # Will be inferred by backend
-                'user_type_confidence': 0.0,
-                'preferences': {
-                    'sustainability_weight': 0.8,
-                    'budget': {'min': 0, 'max': 10000},
-                    'interests': []
-                },
                 'collected_entities': {},
                 'conversation_history': [],  # Training-ready format: [{role, content, timestamp, metadata}]
-                'metadata': {
-                    'total_turns': 0,
-                    'intents': [],
-                    'clarification_count': 0
-                }
             }
             session = await self.store.create_session(session_id, session_data)
         
@@ -59,17 +47,6 @@ class SessionManager:
     async def clear_session(self, session_id: str):
         """Clear a session"""
         await self.store.delete_session(session_id)
-    
-    async def trim_history(self, session_id: str):
-        """Trim conversation history to max length"""
-        session = await self.store.get_session(session_id)
-        if session:
-            history = session.get('conversation_history', [])
-            if len(history) > self.max_history:
-                await self.store.update_session(
-                    session_id,
-                    {'conversation_history': history[-self.max_history:]}
-                )
 
 
 class ConversationOrchestrator:
@@ -110,10 +87,6 @@ class ConversationOrchestrator:
 
         # Get or create session
         session_state = await self.session_manager.get_or_create_session(session_id)
-
-        # Merge user context if provided
-        if user_context:
-            session_state['metadata'].update(user_context)
 
         # Check if there's an active clarification flow
         if self.is_clarification_active(session_state):
@@ -220,16 +193,7 @@ class ConversationOrchestrator:
                 'elements': [],
                 'actions': []
             }
-    
-    async def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """Get session information from database"""
-        return await self.session_manager.store.get_session(session_id)
-    
-    async def get_conversation_history(self, session_id: str) -> List[Dict[str, Any]]:
-        """Get conversation history for a session from database"""
-        session = await self.session_manager.get_or_create_session(session_id)
-        return session.get('conversation_history', [])
-    
+
     async def _save_conversation(self, session_id: str, session_state: Dict[str, Any]):
         """
         Save or update conversation in conversation store for training data
@@ -269,16 +233,13 @@ class ConversationOrchestrator:
                         })
 
                     clarification_data = {
-                        'query': session_state.get('metadata', {}).get('original_clarification_query', ''),
+                        'query': session_state.get('original_clarification_query', ''),
                         'clarifying_questions': questions_with_answers,
                         'clarification_complete': True
                     }
 
             update_data = {
-                'conversation_history': session_state['conversation_history'],
-                'user_type': session_state.get('user_type', 'unknown'),
-                'user_type_confidence': session_state.get('user_type_confidence', 0.0),
-                'metadata': session_state.get('metadata', {})
+                'conversation_history': session_state['conversation_history']
             }
 
             # Add clarification data if available
@@ -291,11 +252,7 @@ class ConversationOrchestrator:
             else:
                 # Create new conversation record
                 conversation_data = {
-                    'user_type': session_state.get('user_type', 'unknown'),
-                    'user_type_confidence': session_state.get('user_type_confidence', 0.0),
-                    'conversation_history': session_state['conversation_history'],
-                    'metadata': session_state.get('metadata', {}),
-                    'preferences': session_state.get('preferences', {})
+                    'conversation_history': session_state['conversation_history']
                 }
                 if clarification_data:
                     conversation_data['clarification_data'] = clarification_data
@@ -306,34 +263,7 @@ class ConversationOrchestrator:
             # Log error but don't fail the main conversation flow
             import logging
             logging.error(f"Error saving conversation {session_id}: {e}")
-    
-    async def export_conversations_for_training(
-        self,
-        output_format: str = 'jsonl',
-        filters: Optional[Dict[str, Any]] = None,
-        limit: int = 10000
-    ) -> List[Dict[str, Any]]:
-        """
-        Export conversations for model training
-        
-        Args:
-            output_format: 'jsonl', 'qa_pairs', or 'full'
-            filters: Optional filters (e.g., {'user_type': 'sustainability_focused'})
-            limit: Maximum conversations to export
-            
-        Returns:
-            List of formatted conversations
-        """
-        return await self.conversation_store.export_for_training(
-            output_format=output_format,
-            filters=filters,
-            limit=limit
-        )
-    
-    async def get_conversation_statistics(self) -> Dict[str, Any]:
-        """Get statistics about stored conversations"""
-        return await self.conversation_store.get_statistics()
-    
+
     async def start_clarification_flow(
         self,
         query: str,
@@ -362,9 +292,7 @@ class ConversationOrchestrator:
         
         # Store clarification state in session
         session_state['clarification_state'] = clarification_state.to_dict()
-        session_state['metadata']['clarification_count'] = session_state['metadata'].get('clarification_count', 0) + 1
-        session_state['metadata']['clarification_started_at'] = datetime.now().isoformat()
-        session_state['metadata']['original_clarification_query'] = query
+        session_state['original_clarification_query'] = query
 
         # Add to conversation history
         self._add_to_history(
@@ -450,20 +378,14 @@ class ConversationOrchestrator:
             # Clear clarification state and mark as complete
             session_state['clarification_state'] = None
             session_state['clarification_complete'] = True
-            session_state['metadata']['clarification_completed_at'] = datetime.now().isoformat()
-            session_state['metadata']['total_clarification_answers'] = len(clarification_state.answers)
 
             await self._update_and_save_session(session_id, session_state)
 
-            # Automatically call intent classifier now that clarification is complete
-            intent_result = await self.call_intent_classifier(session_id)
-            
+            # Return completion response immediately WITHOUT running pipeline
+            # Pipeline will be triggered separately by the frontend
             response = self.clarification_handler.format_question_for_ui(clarification_state)
             response['summary'] = clarification_state.get_summary()
-            
-            # Add intent classification result to response if successful
-            if intent_result and 'error' not in intent_result:
-                response['intent_classification'] = intent_result
+            response['trigger_pipeline'] = True  # Signal to frontend to run pipeline
             
             return response
         else:
@@ -507,29 +429,38 @@ class ConversationOrchestrator:
         clarification_state = ClarificationState.from_dict(state_dict)
         return not clarification_state.is_complete()
     
-    async def call_intent_classifier(self, session_id: str) -> Optional[Dict[str, Any]]:
+
+    async def call_run_pipeline(self, session_id: str) -> Optional[Dict[str, Any]]:
         """
-        Call the intent classifier agent with session data
+        Call the run-pipeline endpoint to execute the full ADK pipeline
+        This runs after all clarification questions have been answered
         
         Args:
-            session_id: Session identifier to retrieve clarification data
+            session_id: Session identifier with complete clarification data
             
         Returns:
-            Intent classification result or None if error
+            Pipeline result (CFE output) or None if error
         """
         try:
+            print(f"[Orchestrator] Calling run-pipeline for session {session_id}")
             # Call backend API endpoint with session_id
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            # Pipeline runs multiple agents sequentially, so needs a longer timeout
+            async with httpx.AsyncClient(timeout=300.0) as client:  # 5 minutes timeout
                 response = await client.get(
-                    f"{settings.backend_url}/intent-classifier",
+                    f"{settings.backend_api_url}/run-pipeline",
                     params={"session_id": session_id}
                 )
+                print(f"[Orchestrator] Pipeline response status: {response.status_code}")
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                print(f"[Orchestrator] Pipeline response keys: {result.keys() if isinstance(result, dict) else 'not a dict'}")
+                return result
         except Exception as e:
             import logging
-            logging.error(f"Error calling intent classifier: {e}")
-            return None
+            import traceback
+            logging.error(f"Error calling run-pipeline: {e}")
+            traceback.print_exc()
+            return {'error': str(e)}
     
     def should_trigger_clarification(self, message: str, session_state: Dict[str, Any]) -> bool:
         """
@@ -549,17 +480,23 @@ class ConversationOrchestrator:
         if self.is_clarification_active(session_state):
             return False
         
-        # Check if this is the first real query (after welcome message)
-        history = session_state.get('conversation_history', [])
-        user_messages = [h for h in history if h.get('role') == 'user']
+        # Check if message looks like a destination/travel request
+        message_lower = message.lower().strip()
         
-        # Trigger clarification on first substantive query
-        # Skip very short messages or greetings
-        if len(user_messages) == 0 and len(message.strip()) > 10:
-            # Check if it looks like a destination request
-            destination_keywords = ['find', 'suggest', 'recommend', 'looking for', 'want to', 'travel', 'visit', 'trip', 'europe', 'city', 'place']
-            message_lower = message.lower()
-            return any(keyword in message_lower for keyword in destination_keywords)
+        # Skip very short messages that don't look like queries
+        if len(message_lower) < 5:
+            return False
+        
+        # Check if it looks like a destination/travel request
+        destination_keywords = [
+            'find', 'suggest', 'recommend', 'looking for', 'want to', 'travel', 
+            'visit', 'trip', 'europe', 'city', 'place', 'destination', 'where',
+            'going to', 'planning', 'holiday', 'vacation', 'tourism', 'tour',
+            'spain', 'france', 'italy', 'germany', 'country', 'countries'
+        ]
+        
+        if any(keyword in message_lower for keyword in destination_keywords):
+            return True
         
         return False
 

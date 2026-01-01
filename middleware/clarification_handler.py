@@ -172,7 +172,7 @@ class ClarificationHandler:
             # Call backend API endpoint
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{settings.backend_api_url}/clarify-questions-gen",
+                    f"{settings.backend_api_url}/generate-clarifying-questions",
                     params={"user_input": query}
                 )
                 response.raise_for_status()
