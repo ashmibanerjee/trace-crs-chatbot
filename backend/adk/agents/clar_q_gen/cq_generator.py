@@ -8,7 +8,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from backend.adk.assembly.run import call_agent_async
+from backend.adk.assembly.run import _call_agent_async
 from backend.adk.agents.clar_q_gen.agent import get_cq_agent
 from backend.schema.schema import ClarifyingQuestion, CQOutput
 
@@ -43,7 +43,7 @@ async def generate_clarifying_questions(query: str) -> CQOutput:
     cq_agent = await get_cq_agent()
 
     try:
-        agent_name, response = await call_agent_async(query, cq_agent)
+        agent_name, response = await _call_agent_async(query, cq_agent)
         cq_data = json.loads(response)
         questions = [
             ClarifyingQuestion(**format_question(cq))

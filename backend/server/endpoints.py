@@ -4,7 +4,7 @@ from backend.adk.agents.cfe.agent import get_cfe_agent
 from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.recsys.agent import get_recsys_agent
 from backend.adk.assembly.pipeline import get_root_agent
-from backend.adk.assembly.run import call_agent_async
+from backend.adk.assembly.run import _call_agent_async, get_model_response
 from backend.schema.schema import CQOutput, RecsysOutput, IntentClassificationOutput, CFEOutput, CFEContext, RecommendationContext
 from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_questions
 import json
@@ -48,13 +48,18 @@ async def get_intent_classifier_response(session_id: str):
 
         # Call agent with session_id embedded in query
         # The callback will extract session_id and retrieve clarification data
-        agent_name, response = await call_agent_async(
-            query=f"[SESSION_ID:{session_id}]",
-            root_agent=model_init,
-            session_id=session_id
-        )
+        # Use async generator to get response
+        agent_name, response_text = None, None
+        async for name, text in _call_agent_async(
+                query=f"[SESSION_ID:{session_id}]",
+                root_agent=model_init,
+                session_id=session_id
+        ):
+            agent_name, response_text = name, text
 
-        response = json.loads(response)
+        response = json.loads(response_text)
+
+        # response = json.loads(response)
         response['session_id'] = session_id
 
         print(f"[Intent Classifier API] Successfully classified intent for session {session_id}")
@@ -85,12 +90,16 @@ async def get_recommender_response(session_id: str, has_context: bool = True):
         else:
             model_init = await get_recsys_agent(has_context=False)
             collection_name = 'baseline_recommendations'
-        agent_name, response = await call_agent_async(
-            query=f"[SESSION_ID:{session_id}]",
-            root_agent=model_init,
-            session_id=session_id
-        )
-        response = json.loads(response)
+        # Use async generator to get response
+        agent_name, response_text = None, None
+        async for name, text in _call_agent_async(
+                query=f"[SESSION_ID:{session_id}]",
+                root_agent=model_init,
+                session_id=session_id
+        ):
+            agent_name, response_text = name, text
+
+        response = json.loads(response_text)
         ingestion_success = await ingest_response_firestore(collection_name, session_id, response)
         if ingestion_success:
             print(f"[Recommender API] Successfully ingested response for session {session_id}")
@@ -124,12 +133,16 @@ async def get_cfe_response(session_id: str):
             raise ValueError("Session ID is required for CFE generation")
 
         model_init = await get_cfe_agent()
-        agent_name, response = await call_agent_async(
-            query=f"[SESSION_ID:{session_id}]",
-            root_agent=model_init,
-            session_id=session_id
-        )
-        response = json.loads(response)
+        # Use async generator to get response
+        agent_name, response_text = None, None
+        async for name, text in _call_agent_async(
+                query=f"[SESSION_ID:{session_id}]",
+                root_agent=model_init,
+                session_id=session_id
+        ):
+            agent_name, response_text = name, text
+
+        response = json.loads(response_text)
         ingestion_success = await ingest_response_firestore("cfe_responses", session_id, response)
         if ingestion_success:
             print(f"[Recommender API] Successfully ingested response for session {session_id}")
@@ -152,23 +165,55 @@ async def run_pipeline(session_id: str):
     try:
         print(f"[Pipeline API] Received request for session_id: {session_id}")
         model_init = await get_root_agent()
-        agent_name, response = await call_agent_async(
+        cfe_output = await get_model_response(
             query=f"[SESSION_ID:{session_id}]",
             root_agent=model_init,
-            session_id=session_id
+            session_id=session_id,
+            return_cfe_only=True
         )
-        response = json.loads(response)
-        return response
-        # TODO
-        # ingestion_success = await ingest_response_firestore("cfe__pipeline_responses", session_id, response)
-        # if ingestion_success:
-        #     print(f"[Recommender API] Successfully ingested response for session {session_id}")
-        # else:
-        #     print(f"[Recommender API] Warning: Failed to ingest response for session {session_id}")
-        #
-        # response['db_ingestion_status'] = ingestion_success
-        # response_obj = CFEOutput(**response)
-        # return response_obj
+
+        if not cfe_output:
+            raise HTTPException(status_code=404, detail="CFE response not found in pipeline")
+
+        # Ingest to Firestore
+        response_dict = cfe_output.model_dump()
+        ingestion_success = await ingest_response_firestore("cfe_pipeline_responses", session_id, response_dict)
+
+        if ingestion_success:
+            print(f"[Pipeline API] Successfully ingested CFE response for session {session_id}")
+        else:
+            print(f"[Pipeline API] Warning: Failed to ingest response for session {session_id}")
+
+        cfe_output.db_ingestion_status = ingestion_success
+        return cfe_output
     except Exception as e:
         print(f"[Pipeline API] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/run-pipeline-all-responses")
+async def run_pipeline_all_responses(session_id: str):
+    """
+    Pipeline endpoint - runs all agents and returns all agent responses
+    Useful for debugging or monitoring the complete pipeline
+    """
+    try:
+        print(f"[Pipeline All API] Received request for session_id: {session_id}")
+        model_init = await get_root_agent()
+
+        # Get all responses
+        all_responses = await get_model_response(
+            query=f"[SESSION_ID:{session_id}]",
+            root_agent=model_init,
+            session_id=session_id,
+            return_cfe_only=False
+        )
+
+        return {
+            "session_id": session_id,
+            "responses": all_responses
+        }
+
+    except Exception as e:
+        print(f"[Pipeline All API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
