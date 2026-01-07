@@ -76,7 +76,7 @@ def format_clarification_as_text(clarification_data: dict) -> str:
     formatted += "Clarifying Questions and Answers:\n"
 
     for q in questions:
-        formatted += f"\nQ{q['id']} [{q['category']}]: {q['question']}\n"
+        formatted += f"\nQ{q['id']}: {q['question']}\n"
         formatted += f"Answer: {q.get('answer', 'No answer provided')}\n"
 
     return formatted

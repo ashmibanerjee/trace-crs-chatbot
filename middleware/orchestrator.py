@@ -227,7 +227,7 @@ class ConversationOrchestrator:
                     for q_id_str, ans_data in sorted(answers.items(), key=lambda x: int(x[0])):
                         questions_with_answers.append({
                             'id': int(q_id_str),
-                            'category': ans_data.get('category', ''),
+                            # 'category': ans_data.get('category', ''),
                             'question': ans_data.get('question', ''),
                             'answer': ans_data.get('answer', '')
                         })
@@ -352,7 +352,7 @@ class ConversationOrchestrator:
         question_id_str = str(current_question['id'])
         session_state['collected_entities']['clarification_answers'][question_id_str] = {
             'question': current_question['question'],
-            'category': current_question['category'],
+            # 'category': current_question['category'],
             'answer': answer
         }
 
@@ -360,14 +360,14 @@ class ConversationOrchestrator:
         qa_metadata = {
             'type': 'clarification_question',
             'question_id': current_question['id'],
-            'category': current_question['category']
+            # 'category': current_question['category']
         }
         self._add_to_history(session_state, 'assistant', current_question['question'], qa_metadata)
 
         answer_metadata = {
             'type': 'clarification_answer',
             'question_id': current_question['id'],
-            'category': current_question['category']
+            # 'category': current_question['category']
         }
         self._add_to_history(session_state, 'user', answer, answer_metadata)
 

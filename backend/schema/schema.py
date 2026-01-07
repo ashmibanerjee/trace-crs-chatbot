@@ -5,15 +5,15 @@ from pydantic import BaseModel, Field, constr
 
 class ClarifyingQuestion(BaseModel):
     id: int = Field(..., description="A unique integer ID for the question.")
-    category: Literal[
-        "disambiguation",
-        "preference_personal",
-        "preference_spatial",
-        "preference_temporal",
-        "preference_purpose",
-        "topic",
-        "comparison_sustainability"
-    ] = Field(..., description="The category classification of the clarifying question.")
+    # category: Literal[
+    #     "disambiguation",
+    #     "preference_personal",
+    #     "preference_spatial",
+    #     "preference_temporal",
+    #     "preference_purpose",
+    #     "topic",
+    #     "comparison_sustainability"
+    # ] = Field(..., description="The category classification of the clarifying question.")
     question: str = Field(..., description="The actual text of the clarifying question.")
     answer: Optional[str] = Field(None, description="The answer to the clarifying question, if available.")
 
@@ -59,7 +59,8 @@ class RecsysOutput(BaseModel):
 
     explanation: str = Field(
         ...,
-        description="Brief justification of why the recommendation fits"
+        description="Brief justification of why the recommendation fits", 
+        max_length=200
     )
 
     trade_off: Optional[str] = Field(
@@ -126,7 +127,8 @@ class RecommendationContext(BaseModel):
     )
     explanation: str = Field(
         ...,
-        description="Justification of why the recommendation fits"
+        description="Justification of why the recommendation fits", 
+        max_length=200
     )
     trade_off: Optional[str] = Field(
         None,
@@ -169,7 +171,8 @@ class CFEOutput(BaseModel):
 
     cfe_explanation: str = Field(
         ...,
-        description="Comprehensive explanation combining insights from both recommendations"
+        description="Comprehensive explanation combining insights from both recommendations", 
+        max_length=200
     )
 
     cfe_trade_off: Optional[str] = Field(

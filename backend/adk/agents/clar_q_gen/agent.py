@@ -12,7 +12,7 @@ ENV = Environment(loader=FileSystemLoader(PROMPT_DIR))
 
 
 async def get_cq_agent():
-    cq_template = ENV.get_template("clarifying_questions.jinja2")
+    cq_template = ENV.get_template("cqs_variant1.jinja2")
 
     clarifyingQuestionGenerator = Agent(
         model='gemini-2.5-flash',

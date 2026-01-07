@@ -60,7 +60,7 @@ async def export_clarification_data(
             if format == 'detailed':
                 session_data['clarification_qa'].append({
                     'question_id': q_id,
-                    'category': qa_data.get('category', 'unknown'),
+                    # 'category': qa_data.get('category', 'unknown'),
                     'question': qa_data.get('question', ''),
                     'answer': qa_data.get('answer', '')
                 })
@@ -116,7 +116,7 @@ async def get_clarification_statistics() -> Dict[str, Any]:
         'without_clarification': 0,
         'total_questions_asked': 0,
         'total_answers_collected': 0,
-        'category_breakdown': {},
+        # 'category_breakdown': {},
         'completion_rate': 0
     }
     
@@ -136,10 +136,10 @@ async def get_clarification_statistics() -> Dict[str, Any]:
             for q_id, qa_data in clarification_answers.items():
                 stats['total_answers_collected'] += 1
                 
-                category = qa_data.get('category', 'unknown')
-                if category not in stats['category_breakdown']:
-                    stats['category_breakdown'][category] = 0
-                stats['category_breakdown'][category] += 1
+                # category = qa_data.get('category', 'unknown')
+                # if category not in stats['category_breakdown']:
+                #     stats['category_breakdown'][category] = 0
+                # stats['category_breakdown'][category] += 1
         else:
             stats['without_clarification'] += 1
     
@@ -169,10 +169,10 @@ async def print_clarification_report():
     print(f"  Total Answers Collected: {stats['total_answers_collected']}")
     print(f"  Completion Rate: {stats['completion_rate']:.1f}%")
     
-    print(f"\nQuestion Category Breakdown:")
-    for category, count in sorted(stats['category_breakdown'].items(), 
-                                   key=lambda x: x[1], reverse=True):
-        print(f"  {category}: {count}")
+    # print(f"\nQuestion Category Breakdown:")
+    # for category, count in sorted(stats['category_breakdown'].items(), 
+    #                                key=lambda x: x[1], reverse=True):
+    #     print(f"  {category}: {count}")
     
     print("\n" + "=" * 60)
 
@@ -215,7 +215,7 @@ async def export_for_training(
         for q_id, qa_data in clarification_answers.items():
             example = {
                 "query": original_query,
-                "question_category": qa_data.get('category'),
+                # "question_category": qa_data.get('category'),
                 "clarifying_question": qa_data.get('question'),
                 "user_answer": qa_data.get('answer'),
                 "user_type": conv.get('user_type', 'unknown')

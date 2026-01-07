@@ -25,7 +25,7 @@ def format_question(question_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     return {
         'id': question_data['id'],
-        'category': question_data['category'],
+        # 'category': question_data['category'],
         'question': question_data['question'],
         'answer': None
     }

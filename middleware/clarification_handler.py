@@ -51,7 +51,7 @@ class ClarificationState:
         current_question['answer'] = answer
         self.answers[question_id_str] = {
             'question': current_question['question'],
-            'category': current_question['category'],
+            # 'category': current_question['category'],
             'answer': answer
         }
         
@@ -116,31 +116,31 @@ def _generate_fallback_questions(query: str) -> ClarificationState:
     fallback_questions = [
         {
             'id': 1,
-            'category': 'preference_temporal',
+            # 'category': 'preference_temporal',
             'question': 'When are you planning to travel? (e.g., specific dates, season, or flexible)',
             'answer': None
         },
         {
             'id': 2,
-            'category': 'preference_personal',
+            # 'category': 'preference_personal',
             'question': 'What is your approximate budget for this trip? (e.g., budget-friendly, mid-range, luxury)',
             'answer': None
         },
         {
             'id': 3,
-            'category': 'preference_purpose',
+            # 'category': 'preference_purpose',
             'question': 'What are you most interested in? (e.g., culture, nature, adventure, relaxation, nightlife)',
             'answer': None
         },
         {
             'id': 4,
-            'category': 'preference_spatial',
+            # 'category': 'preference_spatial',
             'question': 'Do you prefer cities, coastal areas, countryside, or mountains?',
             'answer': None
         },
         {
             'id': 5,
-            'category': 'comparison_sustainability',
+            # 'category': 'comparison_sustainability',
             'question': 'How important is sustainability in your travel choices? (e.g., very important, somewhat important, not a priority)',
             'answer': None
         }
@@ -230,7 +230,7 @@ class ClarificationHandler:
             'question_id': current_question['id'],
             'progress': progress,
             'metadata': {
-                'category': current_question['category'],
+                # 'category': current_question['category'],
                 'clarification_active': True
             }
         }
