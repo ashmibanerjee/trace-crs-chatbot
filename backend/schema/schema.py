@@ -5,15 +5,6 @@ from pydantic import BaseModel, Field, constr
 
 class ClarifyingQuestion(BaseModel):
     id: int = Field(..., description="A unique integer ID for the question.")
-    # category: Literal[
-    #     "disambiguation",
-    #     "preference_personal",
-    #     "preference_spatial",
-    #     "preference_temporal",
-    #     "preference_purpose",
-    #     "topic",
-    #     "comparison_sustainability"
-    # ] = Field(..., description="The category classification of the clarifying question.")
     question: str = Field(..., description="The actual text of the clarifying question.")
     answer: Optional[str] = Field(None, description="The answer to the clarifying question, if available.")
 
@@ -60,7 +51,7 @@ class RecsysOutput(BaseModel):
     explanation: str = Field(
         ...,
         description="Brief justification of why the recommendation fits", 
-        max_length=200
+        max_length=500
     )
 
     trade_off: Optional[str] = Field(

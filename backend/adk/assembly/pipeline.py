@@ -19,9 +19,11 @@ ENV = Environment(loader=FileSystemLoader(PROMPT_DIR))
 
 async def create_pipeline():
     """Initialize and return the root agent pipeline."""
-    ic_agent = await get_ic_agent()
-    rec_baseline_agent = await get_recsys_agent(has_context=False)
-    ca_recsys_agent = await get_recsys_agent(has_context=True)
+    ic_agent, rec_baseline_agent, ca_recsys_agent = await asyncio.gather(
+        get_ic_agent(),
+        get_recsys_agent(has_context=False),
+        get_recsys_agent(has_context=True)
+    )
 
     sequential_pipeline = SequentialAgent(
         name="SequentialPipeline",
@@ -50,8 +52,6 @@ async def create_pipeline():
     )
 
     return overall_workflow
-
-
 
 
 async def get_root_agent():
