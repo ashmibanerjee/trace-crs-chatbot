@@ -1,56 +1,25 @@
-# Core dependencies
+# Core Application Dependencies
+# Let pip resolve all transitive dependencies automatically
+
+# Frontend
 chainlit
+
+# Backend API
 fastapi
 uvicorn[standard]
+
+# Google Cloud & ADK
+google-adk
+google-cloud-firestore
+google-cloud-storage
+
+# Utilities
+python-dotenv
+jinja2
 pydantic
 pydantic-settings
 
-# ADK and Google AI (for future integration)
-# google-generativeai==0.3.0
-# google-cloud-aiplatform==1.38.0
-sentence-transformers
-gradio
-gradio_client
-python-dotenv
-google-cloud-aiplatform
-google-cloud
-vertexai==1.64.0
-huggingface_hub
-certifi==2024.7.4
-bitsandbytes
-accelerate
-anthropic
-openai
-transformers 
-llama-index 
-llama-index-llms-huggingface
-llama-index-llms-huggingface-api
-llama-index-embeddings-huggingface
-llama-index-graph-stores-neo4j
-pyvis 
-accelerator
-jinja2
-google-generativeai
-datasets
-bertopic
-nltk
-langdetect
-lancedb
-mistralai[gcp]
-num2words
-google-genai-1.16.1
-google-adk
+# Development/Testing (optional - can be moved to dev-requirements.txt)
+pytest
+pytest-asyncio
 
-# Database
-google-cloud-firestore>=2.14.0  # For production persistent storage
-
-# Utilities
-python-dotenv==1.0.0
-aiofiles==23.2.1
-httpx==0.25.0
-
-# Development
-pytest==7.4.3
-pytest-asyncio==0.21.1
-black==23.11.0
-ruff==0.1.6

@@ -1,5 +1,6 @@
 import uvicorn
-from fastapi import FastAPI, APIRouter
+import os
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .endpoints import router
 from pathlib import Path
@@ -19,5 +20,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check endpoint for Cloud Run
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for container orchestration"""
+    return {"status": "healthy", "service": "CRS ADK Backend API"}
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    port = int(os.getenv("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
