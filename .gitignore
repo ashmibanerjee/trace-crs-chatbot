@@ -219,6 +219,13 @@ __marimo__/
 !config.example.json
 credentials/
 crs-chatbot-application-secret.json
+
+# ADK credentials
+backend/adk/assembly/.config/
+backend/adk/assembly/.env
+backend/server/.env
+
+# Virtual environment
 venv/
 .idea/
 backend/adk/.adk/
@@ -226,3 +233,7 @@ backend/adk/assembly/.adk/
 backend/prompts/.adk/
 backend/adk/agents/intent_classification/.adk/
 chainlit.md
+.DS_Store
+.gcloudignore
+backend/.DS_Store
+google-cloud-sdk/
