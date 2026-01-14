@@ -61,11 +61,50 @@ class ConversationOrchestrator:
         Credentials read from .env file
         """
         self.session_manager = SessionManager()
-        self.clarification_handler = ClarificationHandler()
+
+        # Backend URL (will be determined on first use)
+        self._backend_url: Optional[str] = None
+        self._backend_url_checked: bool = False
+
+        # Initialize clarification handler with backend URL resolver
+        self.clarification_handler = ClarificationHandler(
+            backend_url_resolver=self.get_backend_url
+        )
 
         # Initialize Firestore conversation store from .env
         self.conversation_store = get_conversation_store()
-    
+
+    async def get_backend_url(self) -> str:
+        """
+        Get the backend URL, checking local first and falling back to cloud if needed.
+        Caches the result after first check.
+
+        Returns:
+            Backend URL to use
+        """
+        if self._backend_url_checked and self._backend_url:
+            return self._backend_url
+
+        # Try local backend first
+        local_url = settings.backend_api_url
+        try:
+            async with httpx.AsyncClient(timeout=settings.backend_connection_timeout) as client:
+                response = await client.get(f"{local_url}/health", timeout=settings.backend_connection_timeout)
+                if response.status_code == 200:
+                    print(f"✓ Using local backend: {local_url}")
+                    self._backend_url = local_url
+                    self._backend_url_checked = True
+                    return local_url
+        except (httpx.ConnectError, httpx.TimeoutException, Exception) as e:
+            print(f"✗ Local backend not available ({type(e).__name__}), falling back to cloud")
+
+        # Fall back to cloud backend
+        cloud_url = settings.backend_api_url_fallback
+        print(f"✓ Using cloud backend: {cloud_url}")
+        self._backend_url = cloud_url
+        self._backend_url_checked = True
+        return cloud_url
+
     async def process_message(
         self,
         message: str,
@@ -442,12 +481,15 @@ class ConversationOrchestrator:
             Pipeline result (CFE output) or None if error
         """
         try:
-            print(f"[Orchestrator] Calling run-pipeline for session {session_id}")
+            # Get the appropriate backend URL (local or cloud)
+            backend_url = await self.get_backend_url()
+            print(f"[Orchestrator] Calling run-pipeline for session {session_id} at {backend_url}")
+
             # Call backend API endpoint with session_id
             # Pipeline runs multiple agents sequentially, so needs a longer timeout
             async with httpx.AsyncClient(timeout=300.0) as client:  # 5 minutes timeout
                 response = await client.get(
-                    f"{settings.backend_api_url}/run-pipeline",
+                    f"{backend_url}/run-pipeline",
                     params={"session_id": session_id}
                 )
                 print(f"[Orchestrator] Pipeline response status: {response.status_code}")

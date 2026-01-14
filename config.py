@@ -31,7 +31,9 @@ class Settings(BaseSettings):
 
     # Backend API
     backend_api_url: str = "http://localhost:8001"
-    
+    backend_api_url_fallback: str = "https://adk-agent-service-778145853986.europe-west1.run.app"
+    backend_connection_timeout: float = 5.0  # Timeout for checking if local backend is available
+
     class Config:
         env_file = ".env"
         case_sensitive = False

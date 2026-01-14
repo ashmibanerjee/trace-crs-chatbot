@@ -158,6 +158,15 @@ class ClarificationHandler:
     Integrates with the ADK clarifying question agent
     """
     
+    def __init__(self, backend_url_resolver=None):
+        """
+        Initialize clarification handler
+
+        Args:
+            backend_url_resolver: Optional async function that returns backend URL
+        """
+        self.backend_url_resolver = backend_url_resolver
+
     async def generate_questions(self, query: str) -> Optional[ClarificationState]:
         """
         Generate clarifying questions for a user query by calling backend API
@@ -169,10 +178,16 @@ class ClarificationHandler:
             ClarificationState object or None if generation fails
         """
         try:
+            # Get backend URL (with fallback if needed)
+            if self.backend_url_resolver:
+                backend_url = await self.backend_url_resolver()
+            else:
+                backend_url = settings.backend_api_url
+
             # Call backend API endpoint
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{settings.backend_api_url}/generate-clarifying-questions",
+                    f"{backend_url}/generate-clarifying-questions",
                     params={"user_input": query}
                 )
                 response.raise_for_status()

@@ -16,7 +16,7 @@ Make sure the google-cloud-sdk is installed and configured on your local machine
 
 ./google-cloud-sdk/bin/gcloud services enable run.googleapis.com
  ```
-4. Deploy the application (from `crs-chatbot` root directory):
+4. Build the application (from `crs-chatbot` root directory):
 ```bash
 ./google-cloud-sdk/bin/gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/adk-agent-service . 
 ```

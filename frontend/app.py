@@ -29,11 +29,13 @@ async def on_chat_start():
     welcome_message = """# Welcome to Sustainable Tourism Assistant! 🌍✨
 
 I'm here to help you discover eco-friendly travel destinations tailored to your preferences.
-
+### Right now please ask me only about city trips where I can recommend you cities to visit.
+---
 ### 📝 How it works:
 
 1. **Share your travel preferences** → Tell me what you're looking for
-2. **Answer clarifying questions** → I'll ask targeted questions to understand your needs. Please try to be as specific as possible. This helps me understand your preferences better.
+2. **Answer clarifying questions** → I'll ask targeted questions to understand your needs. 
+Please try to be as specific as possible. This helps me understand your preferences better.
 3. **Get personalized recommendations** → Receive curated suggestions based on your answers
 4. **Provide feedback** → Help us improve by rating your experience
 
