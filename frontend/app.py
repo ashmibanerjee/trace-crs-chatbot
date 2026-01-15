@@ -65,16 +65,16 @@ async def on_message(message: cl.Message):
 
     # Get session info
     session_id = cl.user_session.get("id")
-    
+
     # Check if we're expecting feedback text
     feedback_rating = cl.user_session.get("feedback_rating")
     if feedback_rating and not cl.user_session.get("feedback_text_collected"):
         # This is the feedback text
         feedback_text = message.content.strip()
-        
+
         # Mark that we've collected the text feedback
         cl.user_session.set("feedback_text_collected", True)
-        
+
         # Skip if user doesn't want to provide feedback
         if feedback_text.lower() in ['skip', 'no', 'none', 'n/a']:
             await save_feedback(
@@ -97,11 +97,11 @@ async def on_message(message: cl.Message):
                 content="Thank you for your detailed feedback! We really appreciate it. 🙏",
                 author="Assistant"
             ).send()
-        
+
         # Clear the feedback state and create new session for next conversation
         cl.user_session.set("feedback_rating", None)
         await create_new_session()
-        
+
         # Inform user that a new session has started
         await cl.Message(
             content="Feel free to start a new search! I'm ready to help you find your next destination. 🌍",
@@ -145,10 +145,10 @@ async def on_message(message: cl.Message):
     # Handle clarification completion and display pipeline results
     if response.get('type') == 'clarification_complete':
         print(f"[Frontend] Clarification complete detected!")
-        
+
         # Store that clarification is complete
         cl.user_session.set("clarification_complete", True)
-        
+
         # Check if we need to trigger the pipeline
         if response.get('trigger_pipeline'):
             # Show processing messages
@@ -156,24 +156,24 @@ async def on_message(message: cl.Message):
                 content="✨ **Analyzing your preferences... Please wait. This may take a few minutes**",
                 author="Assistant"
             ).send()
-            
+
             # Show a step-by-step progress indicator
             async with cl.Step(name="🧠 Understanding your travel profile", type="tool") as step:
                 step.output = "Analyzing your answers..."
-                
+
                 async with cl.Step(name="🔍 Finding personalized recommendations", type="tool") as step2:
                     step2.output = "Searching for the best destinations..."
-                    
+
                     async with cl.Step(name="📊 Generating explanations", type="tool") as step3:
                         step3.output = "Creating your personalized report..."
-                        
+
                         # Now run the pipeline
                         pipeline_result = await orchestrator.call_run_pipeline(session_id)
-                        
+
                         step3.output = "Complete! ✓"
                     step2.output = "Complete! ✓"
                 step.output = "Complete! ✓"
-            
+
             # Display the results
             if pipeline_result and 'error' not in pipeline_result:
                 await display_pipeline_results(pipeline_result)
@@ -213,16 +213,16 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
         # Debug: Print the pipeline result structure
         print(f"[Frontend] Pipeline result keys: {pipeline_result.keys()}")
         print(f"[Frontend] Pipeline result: {pipeline_result}")
-        
+
         # Extract key information from the pipeline result (CFEOutput structure)
         context = pipeline_result.get('context', {})
         intent_classification = context.get('intent_classification') if context else None
-        
+
         # Display intent classification if available
         if intent_classification:
             persona = intent_classification.get('user_travel_persona', 'Unknown')
             travel_intent = intent_classification.get('travel_intent', 'Not specified')
-            
+
             intent_text = f"""### 🎯 Your Travel Profile
 
 **Persona:** {persona}  
@@ -232,22 +232,22 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
                 content=intent_text,
                 author="Assistant"
             ).send()
-        
+
         # Display the main CFE recommendation
         cfe_recommendation = pipeline_result.get('cfe_recommendation', [])
         cfe_explanation = pipeline_result.get('cfe_explanation', '')
         cfe_trade_off = pipeline_result.get('cfe_trade_off')
-        
+
         print(f"[Frontend] cfe_recommendation: {cfe_recommendation}")
         print(f"[Frontend] cfe_explanation: {cfe_explanation[:100] if cfe_explanation else 'None'}...")
-        
+
         if cfe_recommendation:
             # Format recommendations
             if isinstance(cfe_recommendation, list):
                 recs_text = ", ".join(str(r) for r in cfe_recommendation)
             else:
                 recs_text = str(cfe_recommendation)
-            
+
             recommendation_text = f"""### 🌟 Your Personalized Recommendations
 
 **Destinations:** {recs_text}
@@ -255,10 +255,10 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
 **Why these recommendations?**
 {cfe_explanation}
 """
-            
+
             if cfe_trade_off:
                 recommendation_text += f"\n\n**Trade-offs:**\n{cfe_trade_off}"
-            
+
             await cl.Message(
                 content=recommendation_text,
                 author="Assistant"
@@ -271,12 +271,12 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
                     content=f"### 🌟 Your Recommendations\n\n{cfe_explanation}",
                     author="Assistant"
                 ).send()
-        
+
         # Display comparison insights if available
         if context:
             baseline_rec = context.get('baseline_recommendation')
             context_rec = context.get('context_aware_recommendation')
-            
+
             if baseline_rec and context_rec:
                 comparison_text = """### 📊 Understanding Your Recommendations
 
@@ -285,22 +285,22 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
                 # Show how context improved recommendations
                 context_cities = context_rec.get('recommendation', [])
                 baseline_cities = baseline_rec.get('recommendation', [])
-                
+
                 if context_cities != baseline_cities:
                     comparison_text += f"\nOur personalized system recommended **{context_cities if isinstance(context_cities, str) else ', '.join(context_cities)}** based on your preferences, "
                     comparison_text += f"while a generic search might have suggested **{baseline_cities if isinstance(baseline_cities, str) else ', '.join(baseline_cities)}**.\n"
-                    
+
                     if context_rec.get('explanation'):
                         comparison_text += f"\n**Why the difference?** {context_rec['explanation']}"
-                
+
                 await cl.Message(
                     content=comparison_text,
                     author="Assistant"
                 ).send()
-        
+
         # Display feedback request
         await display_feedback_request()
-        
+
     except Exception as e:
         print(f"Error displaying pipeline results: {e}")
         import traceback
@@ -334,7 +334,7 @@ Please rate your experience and share any feedback to help us improve!"""
 async def on_quick_reply(action: cl.Action):
     """Handle quick reply button clicks"""
     value = action.payload.get("value", "")
-    
+
     # Process the value by calling on_message
     # Chainlit will automatically attribute the user's message in on_message
     # but we need to display it first.
@@ -344,17 +344,12 @@ async def on_quick_reply(action: cl.Action):
 
 async def handle_sample_query(query: str):
     """Handle sample query button clicks"""
-    # Display the query in the chat
-    # To avoid the assistant logo, we should leave the author empty
-    # so Chainlit attributes it to the default user persona.
-    user_msg = cl.Message(
-        content=query,
-        author="User"
-    )
-    await user_msg.send()
-
-    # Process the query
-    await on_message(cl.Message(content=query))
+    # Populate the chat input instead of auto-sending the message
+    # This lets the user review/edit and press Enter.
+    await cl.send_window_message({
+        "type": "set_chat_input",
+        "value": query
+    })
 
 
 @cl.action_callback("sample_query_1")
@@ -373,8 +368,6 @@ async def on_sample_query_2(action: cl.Action):
 async def on_sample_query_3(action: cl.Action):
     """Handle sample query 3"""
     await handle_sample_query(action.payload["query"])
-
-
 
 
 async def handle_rating_feedback(rating: int):
@@ -398,20 +391,22 @@ async def handle_rating_feedback(rating: int):
 async def on_rating_1(action: cl.Action):
     await handle_rating_feedback(1)
 
+
 @cl.action_callback("rating_2")
 async def on_rating_2(action: cl.Action):
     await handle_rating_feedback(2)
+
 
 @cl.action_callback("rating_3")
 async def on_rating_3(action: cl.Action):
     await handle_rating_feedback(3)
 
+
 @cl.action_callback("rating_4")
 async def on_rating_4(action: cl.Action):
     await handle_rating_feedback(4)
 
+
 @cl.action_callback("rating_5")
 async def on_rating_5(action: cl.Action):
     await handle_rating_feedback(5)
-
-
