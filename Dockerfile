@@ -20,6 +20,7 @@ COPY database/ ./database/
 COPY utils/ ./utils/
 COPY frontend/ ./frontend/
 COPY public/ ./public/
+COPY .chainlit/ ./.chainlit/
 COPY app.py .
 COPY config.py .
 COPY chainlit.md .

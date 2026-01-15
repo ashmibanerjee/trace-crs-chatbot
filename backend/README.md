@@ -20,9 +20,13 @@ Make sure the google-cloud-sdk is installed and configured on your local machine
 ```bash
 ./google-cloud-sdk/bin/gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/adk-agent-service . 
 ```
+5. Deployment (if you're doing this, you can ignore step 4 as Cloud Run will build it for you):
+```bash
+gcloud auth login
+gcloud run deploy adk-agent-service --source .
+```
 
-
-## Deployment
+## Deployment (via Cloud Run Console)
 1. Go to the **[Cloud Run Console](https://console.cloud.google.com/run/overview)**.
 2. Click **Create Service**.
 3. **Container Image URL**: Click "Select" and find the image you just built (in the `gcr.io` or `google-container-registry` folder).

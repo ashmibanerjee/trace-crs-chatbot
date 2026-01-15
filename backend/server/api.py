@@ -6,6 +6,8 @@ from .endpoints import router
 from pathlib import Path
 from dotenv import load_dotenv
 from chainlit.utils import mount_chainlit
+from fastapi.responses import RedirectResponse
+
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 app = FastAPI(title="CRS ADK Backend API")
@@ -30,6 +32,10 @@ async def health_check():
 # target: path to your chainlit python file relative to the working directory
 mount_chainlit(app=app, target="app.py", path="/chat")
 
+@app.get("/")
+async def root():
+    # Redirect users immediately to the chat interface
+    return RedirectResponse(url="/chat")
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8001))
     uvicorn.run(app, host="0.0.0.0", port=port)
