@@ -3,6 +3,7 @@ Chainlit Frontend Application
 Modular UI for Sustainable Tourism CRS
 """
 import chainlit as cl
+import asyncio
 from typing import Dict, Any
 from middleware.orchestrator import orchestrator
 from config import settings
@@ -23,13 +24,14 @@ from frontend.helpers import (
 @cl.on_chat_start
 async def on_chat_start():
     """Initialize chat session"""
-    await get_or_create_session_id()
+    session_id = await get_or_create_session_id()
     await reset_session_state()
 
     welcome_message = """# Welcome to Sustainable Tourism Assistant! 🌍✨
 
 I'm here to help you discover eco-friendly travel destinations tailored to your preferences.
-### Right now please ask me only about city trips where I can recommend you cities to visit.
+> **🏙️ City trips only (for now)**
+> Please ask only about city trips where I can recommend you cities to visit.
 ---
 ### 📝 How it works:
 
@@ -39,14 +41,14 @@ Please try to be as specific as possible. This helps me understand your preferen
 3. **Get personalized recommendations** → Receive curated suggestions based on your answers
 4. **Provide feedback** → Help us improve by rating your experience
 
-💡 *Please be patient—analysis may take a few minutes to ensure quality recommendations.*
+> 💡 *Please be patient—analysis may take a few minutes to ensure quality recommendations.*
 
 ---
 
 **Ready to start? Try one of these examples or ask your own question:**
 """
 
-    actions = create_sample_query_actions()
+    actions = create_sample_query_actions(seed=session_id)
 
     await cl.Message(
         content=welcome_message,
@@ -167,8 +169,13 @@ async def on_message(message: cl.Message):
                     async with cl.Step(name="📊 Generating explanations", type="tool") as step3:
                         step3.output = "Creating your personalized report..."
 
-                        # Now run the pipeline
+                        # Now run the pipeline (retry once on 500 errors)
                         pipeline_result = await orchestrator.call_run_pipeline(session_id)
+                        if pipeline_result and 'error' in pipeline_result:
+                            error_text = str(pipeline_result.get('error'))
+                            if "500 Internal Server Error" in error_text:
+                                await asyncio.sleep(5)
+                                pipeline_result = await orchestrator.call_run_pipeline(session_id)
 
                         step3.output = "Complete! ✓"
                     step2.output = "Complete! ✓"
@@ -319,6 +326,12 @@ async def display_feedback_request():
 
 Please rate your experience and share any feedback to help us improve!"""
 
+    # Disable input while waiting for rating selection
+    await cl.send_window_message({
+        "type": "set_input_disabled",
+        "value": True
+    })
+
     await cl.Message(
         content=feedback_text,
         actions=create_rating_actions(),
@@ -374,6 +387,12 @@ async def handle_rating_feedback(rating: int):
     """Handle rating feedback submission"""
     session_id = cl.user_session.get("id")
     cl.user_session.set("feedback_rating", rating)
+
+    # Re-enable input so user can type optional feedback
+    await cl.send_window_message({
+        "type": "set_input_disabled",
+        "value": False
+    })
 
     await cl.Message(
         content=f"Thank you for rating us {'⭐' * rating} ({rating}/5)!",

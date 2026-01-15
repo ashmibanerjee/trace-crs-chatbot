@@ -55,50 +55,6 @@ The chatbot will be available at `http://localhost:8000`
 
 **All conversations are automatically saved to Firestore!**
 
-# Docker & Cloud Run Deployment
-
-This directory contains the Docker configuration for deploying the CRS Chatbot backend to Google Cloud Run.
-
-## Files
-
-- **Dockerfile**: Multi-stage Docker build for the FastAPI backend
-- **.dockerignore**: Excludes unnecessary files from the Docker build context
-- **deploy.sh**: Automated deployment script (in root directory)
-- **cloudbuild.yaml**: Google Cloud Build configuration (in root directory)
-
-## Architecture
-
-```
-┌─────────────────────┐
-│  Local Machine      │
-│  (Chainlit UI)      │
-└──────────┬──────────┘
-           │
-           │ HTTP/REST API
-           │
-           ▼
-┌─────────────────────┐
-│  Google Cloud Run   │
-│  (FastAPI Backend)  │
-└──────────┬──────────┘
-           │
-           │
-           ▼
-┌─────────────────────┐
-│  Google Firestore   │
-│  (Database)         │
-└─────────────────────┘
-```
-
-## Local Testing
-
-Build and test the Docker image locally before deploying:
-
-```bash
-# From project root
-cd /Users/ashmi/Code/Scripts/phd/crs-chatbot
-
-# Build the image
 docker build -t crs-backend:test -f backend/Dockerfile .
 
 # Run locally

@@ -127,6 +127,15 @@ class ConversationOrchestrator:
         # Get or create session
         session_state = await self.session_manager.get_or_create_session(session_id)
 
+        # If a previous clarification flow completed, allow a new one to start
+        if session_state.get('clarification_complete') and not self.is_clarification_active(session_state):
+            session_state['clarification_complete'] = False
+            session_state['clarification_state'] = None
+            session_state['original_clarification_query'] = None
+            if 'collected_entities' in session_state:
+                session_state['collected_entities'].pop('clarification_answers', None)
+            await self.session_manager.update_session(session_id, session_state)
+
         # Check if there's an active clarification flow
         if self.is_clarification_active(session_state):
             return await self.handle_clarification_answer(message, session_id)

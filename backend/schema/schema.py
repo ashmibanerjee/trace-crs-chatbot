@@ -41,7 +41,8 @@ class RecsysOutput(BaseModel):
     user_query: str = Field(..., description="The original user query")
     context: Optional[List[IntentClassificationOutput]] = Field(
         None,
-        description="List of intent classification outputs containing user queries, clarifying Q&A, travel persona, and compromise details"
+        description="List of intent classification outputs containing user queries, clarifying Q&A, travel persona, "
+                    "and compromise details"
     )
     recommendation: Union[str, List[str]] = Field(
         ...,

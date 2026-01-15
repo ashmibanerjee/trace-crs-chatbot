@@ -31,6 +31,17 @@
     return true;
   };
 
+  const setDisabled = (disabled) => {
+    const el = findInput();
+    if (!el) return false;
+    if (el.isContentEditable) {
+      el.setAttribute('contenteditable', disabled ? 'false' : 'true');
+    } else {
+      el.disabled = !!disabled;
+    }
+    return true;
+  };
+
   const trySetInput = (value) => {
     const el = findInput();
     return setValue(el, value);
@@ -38,18 +49,34 @@
 
   window.addEventListener('message', (event) => {
     const data = event?.data;
-    if (!data || data.type !== 'set_chat_input') return;
+    if (!data) return;
 
-    const value = typeof data.value === 'string' ? data.value : '';
+    if (data.type === 'set_chat_input') {
+      const value = typeof data.value === 'string' ? data.value : '';
 
-    if (!trySetInput(value)) {
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts += 1;
-        if (trySetInput(value) || attempts >= 10) {
-          clearInterval(interval);
-        }
-      }, 150);
+      if (!trySetInput(value)) {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts += 1;
+          if (trySetInput(value) || attempts >= 10) {
+            clearInterval(interval);
+          }
+        }, 150);
+      }
+      return;
+    }
+
+    if (data.type === 'set_input_disabled') {
+      const disabled = !!data.value;
+      if (!setDisabled(disabled)) {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts += 1;
+          if (setDisabled(disabled) || attempts >= 10) {
+            clearInterval(interval);
+          }
+        }, 150);
+      }
     }
   });
 })();
