@@ -18,13 +18,17 @@ COPY backend/ ./backend/
 COPY middleware/ ./middleware/
 COPY database/ ./database/
 COPY utils/ ./utils/
+COPY frontend/ ./frontend/
+COPY public/ ./public/
+COPY app.py .
 COPY config.py .
-
+COPY chainlit.md .
 # Environment variables that are NOT secrets can go here
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONPATH=/app
+ENV CHAINLIT_HEADLESS=true
 
 # Expose port
 EXPOSE 8080

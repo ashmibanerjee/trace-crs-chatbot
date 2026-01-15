@@ -234,6 +234,5 @@ backend/prompts/.adk/
 backend/adk/agents/intent_classification/.adk/
 chainlit.md
 .DS_Store
-.gcloudignore
 backend/.DS_Store
 google-cloud-sdk/
