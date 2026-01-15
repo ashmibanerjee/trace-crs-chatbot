@@ -35,6 +35,7 @@ async def create_new_session():
     new_session_id = str(uuid.uuid4())
     cl.user_session.set("id", new_session_id)
     await reset_session_state()
+    cl.user_session.set("welcome_shown", False)
     print(f"New session created: {new_session_id}")
 
 

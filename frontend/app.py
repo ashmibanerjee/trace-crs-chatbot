@@ -27,6 +27,9 @@ async def on_chat_start():
     session_id = await get_or_create_session_id()
     await reset_session_state()
 
+    if cl.user_session.get("welcome_shown") or cl.user_session.get("feedback_rating"):
+        return
+
     welcome_message = """# Welcome to Sustainable Tourism Assistant! 🌍✨
 
 I'm here to help you discover eco-friendly travel destinations tailored to your preferences.
@@ -55,6 +58,8 @@ Please try to be as specific as possible. This helps me understand your preferen
         author="Assistant",
         actions=actions
     ).send()
+
+    cl.user_session.set("welcome_shown", True)
 
 
 # ============================================================================
