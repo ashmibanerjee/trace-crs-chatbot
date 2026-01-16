@@ -24,6 +24,7 @@ COPY .chainlit/ ./.chainlit/
 COPY app.py .
 COPY config.py .
 COPY chainlit.md .
+COPY constants.py .
 # Environment variables that are NOT secrets can go here
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
