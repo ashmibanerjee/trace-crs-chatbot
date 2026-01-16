@@ -99,7 +99,7 @@ async def on_message(message: cl.Message):
         # Note: we do NOT reset welcome_shown
 
         await cl.Message(
-            content="Thanks for your message. Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
+            content="Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
             author="Assistant"
         ).send()
         return
