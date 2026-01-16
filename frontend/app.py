@@ -31,11 +31,12 @@ async def on_chat_start():
     # Initialize state
     await reset_session_state()
 
-    welcome_message = """# Welcome to Sustainable Tourism Assistant! 🌍✨
+    welcome_message = """# Sustainable Tourism Assistant for European Cities! 🌍✨
 
 I'm here to help you discover eco-friendly travel destinations tailored to your preferences.
 > **🏙️ City trips only (for now)**
 > Please ask only about city trips where I can recommend you cities to visit.
+Right now, I specialize in city destinations only within Europe.
 ---
 ### 📝 How it works:
 

@@ -15,6 +15,7 @@ button[id^="sample_query_"] {
   height: auto;
   min-height: 44px;
   align-items: flex-start;
+  color: black;
 }
 
 button[id^="sample_query_"] span,
