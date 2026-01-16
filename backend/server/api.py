@@ -10,6 +10,11 @@ from fastapi.responses import RedirectResponse
 
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
+
+# Set the root directory for Chainlit to find config and public files
+project_root = Path(__file__).parent.parent.parent
+os.environ["CHAINLIT_ROOT"] = str(project_root)
+
 app = FastAPI(title="CRS ADK Backend API")
 app.include_router(router)
 
@@ -29,8 +34,9 @@ async def health_check():
     return {"status": "healthy", "service": "CRS ADK Backend API"}
 
 # MOUNT CHAINLIT
-# target: path to your chainlit python file relative to the working directory
-mount_chainlit(app=app, target="app.py", path="/chat")
+# Construct absolute path to app.py (works both locally and in Docker)
+chainlit_app_path = str(Path(__file__).parent.parent.parent / "app.py")
+mount_chainlit(app=app, target=chainlit_app_path, path="/chat")
 
 @app.get("/")
 async def root():

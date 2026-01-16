@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException
+import time
 
+from fastapi import APIRouter, HTTPException
+import datetime
 from backend.adk.agents.cfe.agent import get_cfe_agent
 from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.recsys.agent import get_recsys_agent
@@ -163,16 +165,19 @@ async def get_cfe_response(session_id: str):
 @router.get("/run-pipeline", response_model=CFEOutput)
 async def run_pipeline(session_id: str):
     try:
+        start_time = time.time()
         print(f"[Pipeline API] Received request for session_id: {session_id}")
         model_init = await get_root_agent()
         cfe_output = await get_model_response(
-            query=f"[SESSION_ID:{session_id}]",
+            query=f"[USER QUERY]: {session_id}]",
             root_agent=model_init,
             session_id=session_id,
             return_cfe_only=True
         )
-
-        if not cfe_output:
+        end_time = time.time()
+        if cfe_output:
+            cfe_output.time_taken_seconds = end_time - start_time
+        else:
             raise HTTPException(status_code=404, detail="CFE response not found in pipeline")
 
         # Ingest to Firestore
