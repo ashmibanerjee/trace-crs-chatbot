@@ -207,9 +207,10 @@ marimo/_lsp/
 __marimo__/
 
 # Chainlit
-.chainlit/
+.chainlit
 .files/
-
+!.chainlit/translations/en-US.json
+!.chainlit/config.toml
 # Environment variables
 .env
 .env.local
