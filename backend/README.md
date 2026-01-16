@@ -25,6 +25,8 @@ Make sure the google-cloud-sdk is installed and configured on your local machine
 gcloud auth login
 gcloud run deploy adk-agent-service --source .
 ```
+If prompted, select the region (in this case: `eu-west1`) and allow unauthenticated invocations.
+`gcloud config set run/region europe-west1`
 
 ## Deployment (via Cloud Run Console)
 1. Go to the **[Cloud Run Console](https://console.cloud.google.com/run/overview)**.
