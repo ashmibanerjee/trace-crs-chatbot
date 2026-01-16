@@ -52,7 +52,7 @@ class RecsysOutput(BaseModel):
     explanation: str = Field(
         ...,
         description="Brief justification of why the recommendation fits", 
-        max_length=500
+        # max_length=500
     )
 
     trade_off: Optional[str] = Field(
