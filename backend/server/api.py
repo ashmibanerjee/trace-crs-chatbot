@@ -2,6 +2,7 @@ import uvicorn
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .endpoints import router
 from pathlib import Path
 from dotenv import load_dotenv
@@ -27,6 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount public folder if it exists
+public_path = project_root / "public"
+if public_path.exists():
+    app.mount("/public", StaticFiles(directory=str(public_path)), name="public")
+    # Also mount it under /chat/public for internal relative links
+    app.mount("/chat/public", StaticFiles(directory=str(public_path)), name="public_chat")
+
 # Health check endpoint for Cloud Run
 @app.get("/health")
 async def health_check():
@@ -42,6 +50,7 @@ mount_chainlit(app=app, target=chainlit_app_path, path="/chat")
 async def root():
     # Redirect users immediately to the chat interface
     return RedirectResponse(url="/chat")
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8001))
     uvicorn.run(app, host="0.0.0.0", port=port)

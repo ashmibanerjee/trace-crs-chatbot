@@ -15,6 +15,19 @@ from frontend.helpers import (
     create_rating_actions
 )
 
+
+async def perform_soft_reset():
+    """Clears session flags to allow for a fresh start without wiping the chat history."""
+    cl.user_session.set("feedback_rating", None)
+    cl.user_session.set("feedback_text_collected", None)
+    cl.user_session.set("clarification_complete", False)
+    cl.user_session.set("clarification_active", False)
+
+    await cl.Message(
+        content="Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
+        author="Assistant"
+    ).send()
+
 # ============================================================================
 # Session Management
 # ============================================================================
@@ -78,7 +91,6 @@ async def on_message(message: cl.Message):
         feedback_text = message.content.strip()
         cl.user_session.set("feedback_text_collected", True)
 
-        # Determine if user skipped or provided text
         is_skip = feedback_text.lower() in ['skip', 'no', 'none', 'n/a']
         save_text = None if is_skip else feedback_text
 
@@ -88,25 +100,15 @@ async def on_message(message: cl.Message):
             feedback_text=save_text
         )
 
-        feedback_reply = "Thank you for your feedback! 🙏" if is_skip else "Thank you for your detailed feedback! We really appreciate it. 🙏"
+        feedback_reply = "Thank you for your feedback! 🙏" if is_skip else "Thank you for your detailed feedback! 🙏"
         await cl.Message(content=feedback_reply, author="Assistant").send()
 
-        # --- SOFT RESET (The Fix) ---
-        # Instead of create_new_session() which wipes EVERYTHING, we clear specific flags
-        cl.user_session.set("feedback_rating", None)
-        cl.user_session.set("feedback_text_collected", None)
-        cl.user_session.set("clarification_complete", False)
-        cl.user_session.set("clarification_active", False)
-        # Note: we do NOT reset welcome_shown
-
-        await cl.Message(
-            content="Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
-            author="Assistant"
-        ).send()
+        # Call the helper to reset and show the "Ready to start" message
+        await perform_soft_reset()
         return
 
     # 2. NORMAL CHAT PROCESSING
-    async with cl.Step(name="🤔 Thinking", type="tool") as step:
+    async with cl.Step(name="🤔 Thinking", type="llm") as step:
         try:
             response = await orchestrator.process_message(
                 message=message.content,
@@ -114,7 +116,22 @@ async def on_message(message: cl.Message):
                 user_context={'timestamp': message.created_at}
             )
 
-            # Update clarification state
+            # --- HANDLE INVALID REQUEST (question_id == -1) ---
+            if response.get("question_id") == -1:
+                step.output = "Irrelevant request detected."
+
+                # Get text or use a descriptive fallback
+                reason = response.get('text')
+                if not reason:
+                    reason = "I specialize in European city trip recommendations. Please ask about city destinations!"
+
+                await cl.Message(content=reason, author="Assistant").send()
+
+                cl.user_session.set("clarification_complete", True)
+                await perform_soft_reset()
+                return
+
+            # Update normal clarification state
             if response.get('type') in ['clarification_question', 'clarification_complete']:
                 cl.user_session.set("clarification_active", response.get('type') == 'clarification_question')
 
@@ -127,7 +144,7 @@ async def on_message(message: cl.Message):
             ).send()
             return
 
-    # Send the agent's response text
+    # Send the agent's response text (for normal clarification questions)
     await cl.Message(
         content=response['text'],
         author="Assistant"
@@ -144,7 +161,6 @@ async def on_message(message: cl.Message):
             ).send()
 
             async with cl.Step(name="🧠 Generating Recommendations", type="tool") as step:
-                # Try pipeline call with simple retry for 500 errors
                 pipeline_result = await orchestrator.call_run_pipeline(session_id)
                 if pipeline_result and 'error' in pipeline_result:
                     await asyncio.sleep(3)
@@ -160,9 +176,7 @@ async def on_message(message: cl.Message):
                     content=f"⚠️ Issue generating recommendations: {error_info}",
                     author="Assistant"
                 ).send()
-                # Still show feedback request even on error so user can reset
                 await display_feedback_request()
-
 
 # ============================================================================
 # UI Helpers

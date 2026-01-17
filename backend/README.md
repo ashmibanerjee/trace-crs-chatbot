@@ -46,3 +46,6 @@ Test your health check endpoint:
 https://YOUR-SERVICE-URL.run.app/health
 
 If you get a 200 OK, your API is live!
+
+## Firebase hosting
+`firebase deploy --only hosting`

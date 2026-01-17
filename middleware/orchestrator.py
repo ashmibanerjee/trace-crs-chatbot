@@ -147,7 +147,7 @@ class ConversationOrchestrator:
         # For non-clarification messages, return a simple acknowledgment
         # TODO: Integrate with backend recommendation agents
         return {
-            'text': "Thank you for your message. Recommendation system integration coming soon.",
+            'text': "Thank you for your message. This is currently out of my scope.",
             'elements': [],
             'actions': [],
             'metadata': {}

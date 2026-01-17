@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 COPY backend/ ./backend/
 COPY middleware/ ./middleware/
@@ -25,6 +25,7 @@ COPY app.py .
 COPY config.py .
 COPY chainlit.md .
 COPY constants.py .
+
 # Environment variables that are NOT secrets can go here
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
