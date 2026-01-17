@@ -3,10 +3,13 @@ Frontend Helper Functions
 Reusable utilities for the Chainlit app
 """
 import chainlit as cl
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import uuid
 from datetime import datetime
 from database.config import get_conversation_store
+from pathlib import Path
+import json
+import random
 
 
 async def get_or_create_session_id() -> str:
@@ -32,6 +35,7 @@ async def create_new_session():
     new_session_id = str(uuid.uuid4())
     cl.user_session.set("id", new_session_id)
     await reset_session_state()
+    cl.user_session.set("welcome_shown", False)
     print(f"New session created: {new_session_id}")
 
 
@@ -69,8 +73,16 @@ async def save_feedback(session_id: str, rating: int, feedback_text: Optional[st
         traceback.print_exc()
 
 
-def create_action(name: str, payload: Dict[str, Any], label: str,
-                  description: str = "", bg_color: str = "#6366f1") -> cl.Action:
+def create_action(
+    name: str,
+    payload: Dict[str, Any],
+    label: str,
+    description: str = "",
+    bg_color: str = "#e0f2ff",
+    text_color: str = "#0f172a",
+    border_color: str = "#bae6fd",
+    action_id: Optional[str] = None,
+) -> cl.Action:
     """
     Create a standardized action button
 
@@ -84,58 +96,79 @@ def create_action(name: str, payload: Dict[str, Any], label: str,
     Returns:
         Chainlit Action object
     """
-    return cl.Action(
+    action = cl.Action(
         name=name,
         payload=payload,
         label=label,
         description=description,
         style={
             "background-color": bg_color,
-            "color": "white",
-            "border-radius": "8px",
-            "padding": "12px 24px",
+            "color": text_color,
+            "border": f"1px solid {border_color}",
+            "border-radius": "10px",
+            "padding": "12px 16px",
             "font-weight": "500"
         }
     )
 
+    if action_id:
+        action.id = action_id
 
-def create_sample_query_actions():
+    return action
+
+
+def _load_filtered_queries() -> List[str]:
+    """Load query_text values from filtered_queries.json"""
+    public_path = Path(__file__).resolve().parents[1] / "public" / "filtered_queries.json"
+    if not public_path.exists():
+        return []
+
+    try:
+        data = json.loads(public_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    if not isinstance(data, list):
+        return []
+
+    queries = [item.get("query_text") for item in data if isinstance(item, dict)]
+    return [q for q in queries if isinstance(q, str) and q.strip()]
+
+
+def create_sample_query_actions(seed: Optional[str] = None):
     """Create sample query action buttons"""
-    queries = [
-        {
-            "name": "sample_query_1",
-            "query": "Find a low-budget, walkable city in Europe with unusual museums or a hidden, alternative "
-                     "nightlife scene.",
-            "label": "🎨 Find a low-budget, walkable city in Europe with unusual museums or a hidden, alternative "
-                     "nightlife scene.",
-            "color": "#6366f1"
-        },
-        {
-            "name": "sample_query_2",
-            "query": "Quiet European coastal city with good air quality, affordable, not touristy, with interesting nightlife options.",
-            "label": "🌊 Quiet European coastal city with good air quality, affordable, not touristy, with interesting nightlife options.",
-            "color": "#10b981"
-        },
-        {
-            "name": "sample_query_3",
-            "query": "Best European cities for unique, artistic experiences and independent cinema, avoiding "
-                     "mainstream tourist attractions?",
-            "label": "🎬 Best European cities for unique, artistic experiences and independent cinema, avoiding "
-                     "mainstream tourist attractions?",
-            "color": "#f59e0b"
-        }
-    ]
+    all_queries = _load_filtered_queries()
 
-    return [
-        create_action(
-            name=q["name"],
-            payload={"query": q["query"]},
-            label=q["label"],
-            description="",
-            bg_color=q["color"]
+    if len(all_queries) >= 3:
+        rng = random.Random(seed) if seed is not None else random
+        sampled = rng.sample(all_queries, 3)
+    else:
+        sampled = all_queries
+
+    default_colors = ["#e0f2ff", "#e0f2ff", "#e0f2ff"]
+    text_colors = ["#0f172a", "#0f172a", "#0f172a"]
+    border_colors = ["#bae6fd", "#bae6fd", "#bae6fd"]
+    emoji_prefixes = ["✨", "🌍", "🎒", "🗺️", "🌟", "🏙️"]
+    actions = []
+
+    for idx, query in enumerate(sampled, start=1):
+        emoji = emoji_prefixes[(idx - 1) % len(emoji_prefixes)]
+        label = f"{emoji} {query}"
+        color_index = (idx - 1) % len(default_colors)
+        actions.append(
+            create_action(
+                name=f"sample_query_{idx}",
+                payload={"query": query},
+                label=label,
+                description="",
+                bg_color=default_colors[color_index],
+                text_color=text_colors[color_index],
+                border_color=border_colors[color_index],
+                action_id=f"sample_query_{idx}"
+            )
         )
-        for q in queries
-    ]
+
+    return actions
 
 
 def create_rating_actions():

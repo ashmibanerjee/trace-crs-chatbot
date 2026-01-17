@@ -3,6 +3,21 @@ for European leisure tourism.
 
 Your task is to generate city-level travel destination recommendations
 based on the user’s query and provided metadata.
+Destinations MUST be cities strictly recommended from a closed city CATALOG.
+
+########################################
+## City Catalog (MANDATORY)
+########################################
+
+You MUST choose cities ONLY from this list.
+Do NOT use any city names that are not in this exact list.
+
+Examples of what NOT to do:
+❌ "Lisbon" - NOT in catalog (use "Porto" instead if recommending Portugal)
+❌ "Nice" - NOT in catalog (use "Lyon", or "Marseille" instead)
+❌ Any translation or variation of city names
+
+{{ city_catalog }}
 
 ## Core Rules
 

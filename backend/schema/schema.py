@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Literal, Optional, List, Union, Annotated
-from pydantic import BaseModel, Field, constr
-
+from pydantic import BaseModel, Field, constr, field_validator
+from constants import CITIES
 
 class ClarifyingQuestion(BaseModel):
     id: int = Field(..., description="A unique integer ID for the question.")
@@ -41,7 +41,8 @@ class RecsysOutput(BaseModel):
     user_query: str = Field(..., description="The original user query")
     context: Optional[List[IntentClassificationOutput]] = Field(
         None,
-        description="List of intent classification outputs containing user queries, clarifying Q&A, travel persona, and compromise details"
+        description="List of intent classification outputs containing user queries, clarifying Q&A, travel persona, "
+                    "and compromise details"
     )
     recommendation: Union[str, List[str]] = Field(
         ...,
@@ -51,7 +52,7 @@ class RecsysOutput(BaseModel):
     explanation: str = Field(
         ...,
         description="Brief justification of why the recommendation fits", 
-        max_length=500
+        # max_length=500
     )
 
     trade_off: Optional[str] = Field(
@@ -62,6 +63,22 @@ class RecsysOutput(BaseModel):
         default=False,
         description="Status indicating whether the recommendation response was successfully ingested into the database."
     )
+
+    @field_validator('recommendation')
+    @classmethod
+    def validate_cities(cls, v):
+        """Validate that all recommended cities are in the CITIES list."""
+        cities_to_check = [v] if isinstance(v, str) else v
+
+        invalid_cities = [city for city in cities_to_check if city not in CITIES]
+
+        if invalid_cities:
+            raise ValueError(
+                f"Invalid city/cities in recommendation: {', '.join(invalid_cities)}. "
+                f"Must be one of the cities from the CITIES list."
+            )
+
+        return v
 
 
 class CompromiseDetails(BaseModel):
@@ -119,7 +136,7 @@ class RecommendationContext(BaseModel):
     explanation: str = Field(
         ...,
         description="Justification of why the recommendation fits", 
-        max_length=200
+        # max_length=1000
     )
     trade_off: Optional[str] = Field(
         None,
@@ -163,12 +180,16 @@ class CFEOutput(BaseModel):
     cfe_explanation: str = Field(
         ...,
         description="Comprehensive explanation combining insights from both recommendations", 
-        max_length=200
+        # max_length=1000
     )
 
     cfe_trade_off: Optional[str] = Field(
         None,
         description="Description of trade-offs made in the final recommendation"
+    )
+    time_taken_seconds: Optional[float] = Field(
+        None,
+        description="Total time taken in seconds to generate the CFE response"
     )
     db_ingestion_status: bool = Field(
         default=False,

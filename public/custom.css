@@ -1,0 +1,44 @@
+/* Sample query action buttons */
+button[id^="sample_query_"] {
+  white-space: normal !important;
+  line-height: 1.45;
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px 14px;
+  text-align: left;
+  background-color: #e0f2ff !important;
+  border: 1px solid #bae6fd !important;
+  border-radius: 10px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  height: auto;
+  min-height: 44px;
+  align-items: flex-start;
+  color: black;
+}
+
+button[id^="sample_query_"] span,
+button[id^="sample_query_"] div {
+  white-space: normal !important;
+}
+
+/* Highlight note blockquote in welcome message */
+blockquote {
+  background-color: #fff7cc;
+  border-left: 4px solid #facc15;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #3f2d00;
+}
+
+/* Make the first (city trips) callout slightly stronger */
+blockquote:first-of-type {
+  background-color: #fee2e2;
+  border-left-color: #f87171;
+  color: #7f1d1d;
+}
+
+blockquote p {
+  margin: 4px 0;
+}
