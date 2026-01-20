@@ -34,6 +34,9 @@ async def reset_session_state():
     cl.user_session.set("clarification_complete", False)
     cl.user_session.set("feedback_rating", None)
     cl.user_session.set("feedback_text_collected", False)
+    cl.user_session.set("feedback_in_progress", False)
+    cl.user_session.set("current_feedback_question_index", 0)
+    cl.user_session.set("waiting_for_feedback_text", False)
     cl.user_session.set("original_query", None)
 
 
@@ -93,6 +96,76 @@ async def save_feedback(session_id: str, rating: int, feedback_text: Optional[st
         print(f"Error saving feedback: {e}")
         import traceback
         traceback.print_exc()
+
+
+async def save_feedback_answer(session_id: str, q_id: int, question: str, answer: Any, option_id: Optional[int] = None):
+    """
+    Save a single feedback answer to conversations collection iteratively
+
+    Args:
+        session_id: Session identifier
+        q_id: Question ID
+        question: Question text
+        answer: Answer text
+        option_id: Optional option ID if answer was from radio button
+    """
+    try:
+        conversation_store = get_conversation_store()
+
+        # Get existing conversation to preserve previous answers
+        conversation = await conversation_store.get_conversation(session_id)
+
+        # Initialize feedback_answers array if it doesn't exist
+        if conversation and 'feedback_answers' in conversation:
+            feedback_answers = conversation['feedback_answers']
+        else:
+            feedback_answers = []
+
+        # Add new answer
+        feedback_answer = {
+            'q_id': q_id,
+            'question': question,
+            'answer': answer,
+            'option_id': option_id,
+            'timestamp': datetime.now().isoformat()
+        }
+
+        feedback_answers.append(feedback_answer)
+
+        # Update conversation with new feedback answer
+        success = await conversation_store.update_conversation(
+            session_id,
+            {'feedback_answers': feedback_answers}
+        )
+
+        if success:
+            print(f"Feedback answer saved for session {session_id}, q_id: {q_id}")
+        else:
+            print(f"Warning: Could not save feedback answer for session {session_id}")
+
+        return success
+
+    except Exception as e:
+        print(f"Error saving feedback answer: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def load_feedback_questions() -> List[Dict[str, Any]]:
+    """Load feedback questions from feedback_questions.json"""
+    questions_path = Path(__file__).resolve().parent / "feedback_questions.json"
+
+    if not questions_path.exists():
+        print(f"Warning: feedback_questions.json not found at {questions_path}")
+        return []
+
+    try:
+        data = json.loads(questions_path.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"Error loading feedback_questions.json: {e}")
+        return []
 
 
 def create_action(

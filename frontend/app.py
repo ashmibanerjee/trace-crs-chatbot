@@ -11,6 +11,8 @@ from frontend.helpers import (
     get_or_create_session_id,
     reset_session_state,
     save_feedback,
+    save_feedback_answer,
+    load_feedback_questions,
     create_sample_query_actions,
     create_rating_actions,
     create_new_session
@@ -21,6 +23,9 @@ async def perform_soft_reset():
     """Clears session flags to allow for a fresh start without wiping the chat history."""
     cl.user_session.set("feedback_rating", None)
     cl.user_session.set("feedback_text_collected", None)
+    cl.user_session.set("feedback_in_progress", False)
+    cl.user_session.set("current_feedback_question_index", 0)
+    cl.user_session.set("waiting_for_feedback_text", False)
     cl.user_session.set("clarification_complete", False)
     cl.user_session.set("clarification_active", False)
 
@@ -99,33 +104,31 @@ async def on_message(message: cl.Message):
     session_id = cl.user_session.get("conversation_id")
     print(f"[DEBUG] Processing message with conversation_id: {session_id}")
 
-    # 1. CHECK IF WE ARE COLLECTING FEEDBACK TEXT
-    feedback_rating = cl.user_session.get("feedback_rating")
-    if feedback_rating and not cl.user_session.get("feedback_text_collected"):
+    # 1. CHECK IF WE ARE COLLECTING FEEDBACK TEXT (NEW SYSTEM)
+    if cl.user_session.get("waiting_for_feedback_text"):
         feedback_text = message.content.strip()
-        cl.user_session.set("feedback_text_collected", True)
+        questions = cl.user_session.get("feedback_questions", [])
+        current_index = cl.user_session.get("current_feedback_question_index", 0)
 
-        is_skip = feedback_text.lower() in ['skip', 'no', 'none', 'n/a']
-        save_text = None if is_skip else feedback_text
+        if current_index < len(questions):
+            question_data = questions[current_index]
+            is_skip = feedback_text.lower() in ['skip', 'no', 'none', 'n/a']
+            save_text = None if is_skip else feedback_text
 
-        await save_feedback(
-            session_id=session_id,
-            rating=feedback_rating,
-            feedback_text=save_text
-        )
+            # Save the feedback answer
+            await save_feedback_answer(
+                session_id=session_id,
+                q_id=question_data.get("q_id"),
+                question=question_data.get("question"),
+                answer=save_text if save_text else "skipped"
+            )
 
-        feedback_reply = "Thank you for your feedback! 🙏" if is_skip else "Thank you for your detailed feedback! 🙏"
-        await cl.Message(content=feedback_reply, author="Assistant").send()
+            # Move to next question
+            cl.user_session.set("current_feedback_question_index", current_index + 1)
+            cl.user_session.set("waiting_for_feedback_text", False)
 
-        # Create a new session for the next query (without showing welcome screen)
-        new_session_id = await create_new_session()
-        print(f"Created new session after feedback: {new_session_id}")
-
-        # Show ready message
-        await cl.Message(
-            content="Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
-            author="Assistant"
-        ).send()
+            # Display next question
+            await display_current_feedback_question()
 
         return
 
@@ -236,10 +239,89 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
 
 
 async def display_feedback_request():
-    """Display feedback request with star rating options"""
+    """Display first feedback question from feedback_questions.json"""
+    # Load feedback questions
+    questions = load_feedback_questions()
+
+    if not questions:
+        print("No feedback questions found, skipping feedback collection")
+        return
+
+    # Initialize feedback state
+    cl.user_session.set("feedback_in_progress", True)
+    cl.user_session.set("current_feedback_question_index", 0)
+    cl.user_session.set("feedback_questions", questions)
+    cl.user_session.set("waiting_for_feedback_text", False)
+
+    # Display first question
+    await display_current_feedback_question()
+
+
+async def display_current_feedback_question():
+    """Display the current feedback question based on index"""
+    questions = cl.user_session.get("feedback_questions", [])
+    current_index = cl.user_session.get("current_feedback_question_index", 0)
+
+    if current_index >= len(questions):
+        # All questions answered, finish feedback collection
+        await finish_feedback_collection()
+        return
+
+    question_data = questions[current_index]
+    question_text = question_data.get("question", "")
+    options = question_data.get("options", [])
+
+    if options:
+        # Question with radio button options
+        actions = []
+        for option in options:
+            option_id = option.get("option_id")
+            label = option.get("label", "")
+            actions.append(
+                cl.Action(
+                    name="feedback_option",
+                    payload={
+                        "q_id": question_data.get("q_id"),
+                        "option_id": option_id,
+                        "label": label,
+                        "question": question_text,
+                        "current_index": current_index
+                    },
+                    label=label
+                )
+            )
+
+        await cl.Message(
+            content=question_text,
+            actions=actions,
+            author="Assistant"
+        ).send()
+    else:
+        # Free text question
+        cl.user_session.set("waiting_for_feedback_text", True)
+        await cl.Message(
+            content=f"{question_text}\n(Or type 'skip' to skip this question)",
+            author="Assistant"
+        ).send()
+
+
+async def finish_feedback_collection():
+    """Complete feedback collection and start new session"""
+    cl.user_session.set("feedback_in_progress", False)
+    cl.user_session.set("current_feedback_question_index", 0)
+    cl.user_session.set("waiting_for_feedback_text", False)
+
     await cl.Message(
-        content="### 💬 How did you like these recommendations?\nPlease rate your experience:",
-        actions=create_rating_actions(),
+        content="Thank you for your feedback! 🙏",
+        author="Assistant"
+    ).send()
+
+    # Create a new session for the next query
+    new_session_id = await create_new_session()
+    print(f"Created new session after feedback: {new_session_id}")
+
+    await cl.Message(
+        content="Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
         author="Assistant"
     ).send()
 
@@ -260,6 +342,35 @@ async def handle_rating_feedback(rating: int):
         content="Any additional comments? (Or type 'skip' to finish)",
         author="Assistant"
     ).send()
+
+
+@cl.action_callback("feedback_option")
+async def on_feedback_option(action: cl.Action):
+    """Handle feedback option selection (radio buttons)"""
+    session_id = cl.user_session.get("conversation_id")
+    payload = action.payload
+
+    q_id = payload.get("q_id")
+    option_id = payload.get("option_id")
+    label = payload.get("label")
+    question = payload.get("question")
+
+    # Save the feedback answer
+    await save_feedback_answer(
+        session_id=session_id,
+        q_id=q_id,
+        question=question,
+        answer=label,
+        option_id=option_id
+    )
+
+    # Move to next question
+    current_index = cl.user_session.get("current_feedback_question_index", 0)
+    cl.user_session.set("current_feedback_question_index", current_index + 1)
+
+    # Display next question
+    await display_current_feedback_question()
+
 
 @cl.action_callback("rating_1")
 async def on_rating_1(action: cl.Action): await handle_rating_feedback(1)
