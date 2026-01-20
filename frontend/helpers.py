@@ -14,10 +14,17 @@ import random
 
 async def get_or_create_session_id() -> str:
     """Get existing session ID or create a new one"""
-    session_id = cl.user_session.get("id")
-    if not session_id:
+    # Use "conversation_id" instead of "id" as "id" might be reserved by Chainlit
+    session_id = cl.user_session.get("conversation_id")
+
+    # If no session_id or if it's in old UUID format, create a new one
+    if not session_id or "-" in session_id:
         session_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        cl.user_session.set("id", session_id)
+        cl.user_session.set("conversation_id", session_id)
+        print(f"[GET_OR_CREATE] Created/Reset conversation_id to: {session_id}")
+    else:
+        print(f"[GET_OR_CREATE] Using existing conversation_id: {session_id}")
+
     return session_id
 
 
@@ -32,11 +39,26 @@ async def reset_session_state():
 
 async def create_new_session():
     """Create a new session ID and reset session state"""
+    old_session_id = cl.user_session.get("conversation_id")
     new_session_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    cl.user_session.set("id", new_session_id)
+
+    print(f"[SESSION_CHANGE] Old session: {old_session_id} → New session: {new_session_id}")
+
+    # Reset state first, then set new session_id
     await reset_session_state()
-    cl.user_session.set("welcome_shown", False)
-    print(f"New session created: {new_session_id}")
+
+    # Set the new session_id AFTER resetting state using "conversation_id" key
+    cl.user_session.set("conversation_id", new_session_id)
+    cl.user_session.set("welcome_shown", True)  # Don't show welcome again
+
+    # Verify it was set
+    verify_id = cl.user_session.get("conversation_id")
+    print(f"[SESSION_VERIFY] conversation_id after setting: {verify_id}")
+
+    if verify_id != new_session_id:
+        print(f"[ERROR] conversation_id was not set correctly! Expected {new_session_id}, got {verify_id}")
+
+    return new_session_id
 
 
 async def save_feedback(session_id: str, rating: int, feedback_text: Optional[str] = None):

@@ -36,11 +36,17 @@ async def perform_soft_reset():
 @cl.on_chat_start
 async def on_chat_start():
     """Initialize chat session"""
-    session_id = await get_or_create_session_id()
+    print(f"[CHAT_START] on_chat_start called, current conversation_id: {cl.user_session.get('conversation_id')}")
 
     # If the user has already seen the welcome message in this browser session, stop here.
+    # Don't create or modify session_id in this case
     if cl.user_session.get("welcome_shown"):
+        print(f"[CHAT_START] Welcome already shown, returning early with existing session")
         return
+
+    # Only create session_id on first load
+    session_id = await get_or_create_session_id()
+    print(f"[CHAT_START] First load, conversation_id: {session_id}")
 
     # Initialize state
     await reset_session_state()
@@ -84,7 +90,14 @@ Right now, I specialize in city destinations only within Europe.
 @cl.on_message
 async def on_message(message: cl.Message):
     """Handle incoming user messages"""
-    session_id = cl.user_session.get("id")
+
+    # Ensure we have a session_id (in case cl.user_session was reset)
+    if not cl.user_session.get("conversation_id"):
+        print(f"[WARNING] No conversation_id found, creating new one")
+        await get_or_create_session_id()
+
+    session_id = cl.user_session.get("conversation_id")
+    print(f"[DEBUG] Processing message with conversation_id: {session_id}")
 
     # 1. CHECK IF WE ARE COLLECTING FEEDBACK TEXT
     feedback_rating = cl.user_session.get("feedback_rating")
@@ -104,8 +117,16 @@ async def on_message(message: cl.Message):
         feedback_reply = "Thank you for your feedback! 🙏" if is_skip else "Thank you for your detailed feedback! 🙏"
         await cl.Message(content=feedback_reply, author="Assistant").send()
 
-        # Call the helper to reset and show the "Ready to start" message
-        await perform_soft_reset()
+        # Create a new session for the next query (without showing welcome screen)
+        new_session_id = await create_new_session()
+        print(f"Created new session after feedback: {new_session_id}")
+
+        # Show ready message
+        await cl.Message(
+            content="Feel free to start a new search! I'm ready to recommend your next destination. 🌍",
+            author="Assistant"
+        ).send()
+
         return
 
     # 2. NORMAL CHAT PROCESSING
@@ -128,13 +149,9 @@ async def on_message(message: cl.Message):
 
                 await cl.Message(content=reason, author="Assistant").send()
 
-                # Create a new session with timestamp-based ID and log to database
-                await create_new_session()
-                new_session_id = cl.user_session.get("id")
+                # Create a new session with timestamp-based ID for next query
+                new_session_id = await create_new_session()
                 print(f"Created new session after out-of-scope query: {new_session_id}")
-
-                # Initialize the new session in the database
-                await orchestrator.session_manager.get_or_create_session(new_session_id)
 
                 return
 

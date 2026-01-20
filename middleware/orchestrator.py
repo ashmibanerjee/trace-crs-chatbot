@@ -125,7 +125,9 @@ class ConversationOrchestrator:
         """
 
         # Get or create session
+        print(f"[ORCHESTRATOR] Processing message with session_id: {session_id}")
         session_state = await self.session_manager.get_or_create_session(session_id)
+        print(f"[ORCHESTRATOR] Session has {len(session_state.get('conversation_history', []))} messages in history")
 
         # If a previous clarification flow completed, allow a new one to start
         if session_state.get('clarification_complete') and not self.is_clarification_active(session_state):
