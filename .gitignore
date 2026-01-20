@@ -237,3 +237,4 @@ chainlit.md
 .DS_Store
 backend/.DS_Store
 google-cloud-sdk/
+!frontend/feedback_questions.json
