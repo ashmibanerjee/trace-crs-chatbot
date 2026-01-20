@@ -104,8 +104,14 @@ async def on_message(message: cl.Message):
     session_id = cl.user_session.get("conversation_id")
     print(f"[DEBUG] Processing message with conversation_id: {session_id}")
 
-    # 1. CHECK IF WE ARE COLLECTING FEEDBACK TEXT (NEW SYSTEM)
-    if cl.user_session.get("waiting_for_feedback_text"):
+    # 1. CHECK IF FEEDBACK TEXT INPUT IS EXPECTED (for free-text questions only)
+    waiting_for_text = cl.user_session.get("waiting_for_feedback_text", False)
+
+    print(f"[DEBUG] waiting_for_feedback_text: {waiting_for_text}")
+
+    if waiting_for_text:
+        # Process the text response for free-text feedback question
+        print(f"[DEBUG] Processing text feedback response")
         feedback_text = message.content.strip()
         questions = cl.user_session.get("feedback_questions", [])
         current_index = cl.user_session.get("current_feedback_question_index", 0)
@@ -212,6 +218,7 @@ async def on_message(message: cl.Message):
 async def display_pipeline_results(pipeline_result: Dict[str, Any]):
     """Display the results from the pipeline execution"""
     try:
+        print(f"[DEBUG] display_pipeline_results called")
         context = pipeline_result.get('context', {})
 
         # 1. Persona Info
@@ -219,29 +226,39 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
         if intent_classification:
             persona = intent_classification.get('user_travel_persona', 'Traveler')
             intent_text = f"### 🎯 Your Travel Profile\n**Persona:** {persona}"
+            print(f"[DEBUG] Sending persona info")
             await cl.Message(content=intent_text, author="Assistant").send()
 
         # 2. The Main Recommendations
         cfe_rec = pipeline_result.get('cfe_recommendation', [])
         cfe_exp = pipeline_result.get('cfe_explanation', '')
 
+        print(f"[DEBUG] cfe_rec: {cfe_rec}, cfe_exp length: {len(cfe_exp) if cfe_exp else 0}")
+
         if cfe_rec:
             recs_formatted = ", ".join(cfe_rec) if isinstance(cfe_rec, list) else str(cfe_rec)
             rec_message = f"### 🌟 Your Recommendations\n**Destinations:** {recs_formatted}\n\n**Why?**\n{cfe_exp}"
+            print(f"[DEBUG] Sending recommendations")
             await cl.Message(content=rec_message, author="Assistant").send()
 
         # 3. Trigger Feedback
+        print(f"[DEBUG] Calling display_feedback_request")
         await display_feedback_request()
 
     except Exception as e:
         print(f"Error in display: {e}")
+        import traceback
+        traceback.print_exc()
         await display_feedback_request()
 
 
 async def display_feedback_request():
     """Display first feedback question from feedback_questions.json"""
+    print(f"[DEBUG] display_feedback_request called")
     # Load feedback questions
     questions = load_feedback_questions()
+
+    print(f"[DEBUG] Loaded {len(questions)} feedback questions")
 
     if not questions:
         print("No feedback questions found, skipping feedback collection")
@@ -253,6 +270,8 @@ async def display_feedback_request():
     cl.user_session.set("feedback_questions", questions)
     cl.user_session.set("waiting_for_feedback_text", False)
 
+    print(f"[DEBUG] Set feedback_in_progress=True, calling display_current_feedback_question")
+
     # Display first question
     await display_current_feedback_question()
 
@@ -262,8 +281,11 @@ async def display_current_feedback_question():
     questions = cl.user_session.get("feedback_questions", [])
     current_index = cl.user_session.get("current_feedback_question_index", 0)
 
+    print(f"[DEBUG] display_current_feedback_question: index={current_index}, total={len(questions)}")
+
     if current_index >= len(questions):
         # All questions answered, finish feedback collection
+        print(f"[DEBUG] All questions answered, finishing feedback collection")
         await finish_feedback_collection()
         return
 
@@ -271,8 +293,13 @@ async def display_current_feedback_question():
     question_text = question_data.get("question", "")
     options = question_data.get("options", [])
 
+    print(f"[DEBUG] Question {current_index}: has {len(options)} options")
+
     if options:
-        # Question with radio button options
+        # Question with radio button options - Use AskActionMessage to lock input
+        print(f"[DEBUG] Displaying radio button question with AskActionMessage")
+        session_id = cl.user_session.get("conversation_id")
+
         actions = []
         for option in options:
             option_id = option.get("option_id")
@@ -280,33 +307,83 @@ async def display_current_feedback_question():
             actions.append(
                 cl.Action(
                     name="feedback_option",
-                    payload={
-                        "q_id": question_data.get("q_id"),
-                        "option_id": option_id,
-                        "label": label,
-                        "question": question_text,
-                        "current_index": current_index
-                    },
-                    label=label
+                    value=str(option_id),
+                    label=label,
+                    payload={"option_id": option_id}
                 )
             )
 
-        await cl.Message(
+        # AskActionMessage locks the chat input until user clicks a button
+        res = await cl.AskActionMessage(
             content=question_text,
             actions=actions,
-            author="Assistant"
+            timeout=300  # 5 minutes timeout
         ).send()
+
+        print(f"[DEBUG] User selected res: {res}")
+        print(f"[DEBUG] Type of res: {type(res)}")
+        print(f"[DEBUG] res.__dict__: {res.__dict__ if hasattr(res, '__dict__') else 'N/A'}")
+
+        if res:
+            # Access the option_id from the response payload
+            selected_value = res.get("payload", {}).get("option_id") if isinstance(res, dict) else None
+            selected_label = res.get("label") if isinstance(res, dict) else None
+            print(f"[DEBUG] Selected value: {selected_value}")
+            print(f"[DEBUG] Selected label: {selected_label}")
+
+            # Find the selected option details
+            selected_option = next((opt for opt in options if opt.get("option_id") == selected_value), None)
+            print(f"[DEBUG] Selected option: {selected_option}")
+
+            if selected_option:
+                # Save the feedback answer using the label from response
+                print(f"[DEBUG] Saving feedback answer for q_id={question_data.get('q_id')}")
+                await save_feedback_answer(
+                    session_id=session_id,
+                    q_id=question_data.get("q_id"),
+                    question=question_text,
+                    answer=selected_label,  # Use label from response
+                    option_id=selected_value  # Use option_id from payload
+                )
+
+                # Show confirmation message with question and selected answer
+                # Strip markdown headers from question for cleaner display
+                clean_question = question_text.replace("###", "").replace("**", "").strip()
+                await cl.Message(
+                    content=f"✅ {clean_question}\n**Selected:** {selected_label}",
+                    author="Assistant"
+                ).send()
+
+                # Move to next question
+                new_index = current_index + 1
+                cl.user_session.set("current_feedback_question_index", new_index)
+                print(f"[DEBUG] Moving to question index: {new_index}")
+
+                # Display next question
+                await display_current_feedback_question()
+            else:
+                print(f"[DEBUG] Could not find selected option, finishing feedback")
+                await finish_feedback_collection()
+        else:
+            print(f"[DEBUG] User timeout or cancelled feedback")
+            await finish_feedback_collection()
+
     else:
         # Free text question
+        print(f"[DEBUG] Displaying free text question")
         cl.user_session.set("waiting_for_feedback_text", True)
+
         await cl.Message(
             content=f"{question_text}\n(Or type 'skip' to skip this question)",
             author="Assistant"
         ).send()
+        print(f"[DEBUG] Free text question sent")
 
 
 async def finish_feedback_collection():
     """Complete feedback collection and start new session"""
+    print(f"[DEBUG] finish_feedback_collection called")
+
     cl.user_session.set("feedback_in_progress", False)
     cl.user_session.set("current_feedback_question_index", 0)
     cl.user_session.set("waiting_for_feedback_text", False)
@@ -342,34 +419,6 @@ async def handle_rating_feedback(rating: int):
         content="Any additional comments? (Or type 'skip' to finish)",
         author="Assistant"
     ).send()
-
-
-@cl.action_callback("feedback_option")
-async def on_feedback_option(action: cl.Action):
-    """Handle feedback option selection (radio buttons)"""
-    session_id = cl.user_session.get("conversation_id")
-    payload = action.payload
-
-    q_id = payload.get("q_id")
-    option_id = payload.get("option_id")
-    label = payload.get("label")
-    question = payload.get("question")
-
-    # Save the feedback answer
-    await save_feedback_answer(
-        session_id=session_id,
-        q_id=q_id,
-        question=question,
-        answer=label,
-        option_id=option_id
-    )
-
-    # Move to next question
-    current_index = cl.user_session.get("current_feedback_question_index", 0)
-    cl.user_session.set("current_feedback_question_index", current_index + 1)
-
-    # Display next question
-    await display_current_feedback_question()
 
 
 @cl.action_callback("rating_1")
