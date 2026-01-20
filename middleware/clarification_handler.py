@@ -103,55 +103,6 @@ class ClarificationState:
         return state
 
 
-def _generate_fallback_questions(query: str) -> ClarificationState:
-    """
-    Generate fallback clarifying questions when API is unavailable
-
-    Args:
-        query: User's original query
-
-    Returns:
-        ClarificationState with basic questions
-    """
-    fallback_questions = [
-        {
-            'id': 1,
-            # 'category': 'preference_temporal',
-            'question': 'When are you planning to travel? (e.g., specific dates, season, or flexible)',
-            'answer': None
-        },
-        {
-            'id': 2,
-            # 'category': 'preference_personal',
-            'question': 'What is your approximate budget for this trip? (e.g., budget-friendly, mid-range, luxury)',
-            'answer': None
-        },
-        {
-            'id': 3,
-            # 'category': 'preference_purpose',
-            'question': 'What are you most interested in? (e.g., culture, nature, adventure, relaxation, nightlife)',
-            'answer': None
-        },
-        {
-            'id': 4,
-            # 'category': 'preference_spatial',
-            'question': 'Do you prefer cities, coastal areas, countryside, or mountains?',
-            'answer': None
-        },
-        {
-            'id': 5,
-            # 'category': 'comparison_sustainability',
-            'question': 'How important is sustainability in your travel choices? (e.g., very important, somewhat important, not a priority)',
-            'answer': None
-        }
-    ]
-
-    return ClarificationState(
-        questions=fallback_questions,
-        original_query=query
-    )
-
-
 class ClarificationHandler:
     """
     Handles the flow of clarifying questions
@@ -196,21 +147,27 @@ class ClarificationHandler:
             # Transform API response to expected format
             if result and result.get('clarifying_questions'):
                 questions = result['clarifying_questions']
+
+                # Check if no questions or question_id is -1 (out of scope)
+                if not questions or (len(questions) == 1 and questions[0].get('id') == -1):
+                    print(f"Query is out of scope: {query}")
+                    return None
+
                 return ClarificationState(
                     questions=questions,
                     original_query=result.get('query', query)
                 )
 
-            # Fallback: Generate mock questions if API returns empty
-            print(f"Warning: API returned no questions, using fallback for: {query}")
-            return _generate_fallback_questions(query)
+            # No questions returned - query is out of scope
+            print(f"No clarifying questions returned, query is out of scope: {query}")
+            return None
 
         except httpx.HTTPError as e:
             print(f"HTTP error calling backend API: {e}")
-            return _generate_fallback_questions(query)
+            return None
         except Exception as e:
             print(f"Error generating clarifying questions: {e}")
-            return _generate_fallback_questions(query)
+            return None
 
     def format_question_for_ui(
         self,
@@ -274,9 +231,25 @@ class ClarificationHandler:
         """Format error response"""
         return {
             'type': 'clarification_error',
-            'text': f"⚠️ Unable to generate clarifying questions: {error_message}\n\nProceeding with your original query.",
+            'text': f"⚠️ Unable to generate clarifying questions: Out of scope",
             'metadata': {
                 'clarification_active': False,
                 'error': True
+            }
+        }
+
+    def format_out_of_scope(self) -> Dict[str, Any]:
+        """Format out-of-scope message and reset session"""
+        return {
+            'type': 'out_of_scope',
+            'text': (
+                "I'm sorry, but this query is beyond the scope of European city recommendation. "
+                "I can only help you find and recommend European cities based on your preferences.\n\n"
+                "Please ask a new query about European cities to start again."
+            ),
+            'metadata': {
+                'clarification_active': False,
+                'out_of_scope': True,
+                'reset_session': True
             }
         }

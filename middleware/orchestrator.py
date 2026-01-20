@@ -331,12 +331,37 @@ class ConversationOrchestrator:
         
         # Generate clarifying questions
         clarification_state = await self.clarification_handler.generate_questions(query)
-        
+
         if not clarification_state:
-            # No questions generated or error occurred
-            return self.clarification_handler.format_error(
-                "Could not generate clarifying questions"
+            # No questions generated - query is out of scope
+            # Log the out-of-scope query to conversation history
+            self._add_to_history(
+                session_state,
+                role='user',
+                content=query,
+                metadata={'type': 'out_of_scope_query'}
             )
+
+            self._add_to_history(
+                session_state,
+                role='assistant',
+                content="Query is beyond the scope of European city recommendation.",
+                metadata={'type': 'out_of_scope_response'}
+            )
+
+            # Save to database before clearing
+            await self._save_conversation(session_id, session_state)
+
+            # Clear the session and prepare for a fresh start
+            session_state['clarification_state'] = None
+            session_state['clarification_complete'] = False
+            session_state['original_clarification_query'] = None
+            if 'collected_entities' in session_state:
+                session_state['collected_entities'].pop('clarification_answers', None)
+
+            await self.session_manager.update_session(session_id, session_state)
+
+            return self.clarification_handler.format_out_of_scope()
         
         # Store clarification state in session
         session_state['clarification_state'] = clarification_state.to_dict()

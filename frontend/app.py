@@ -12,7 +12,8 @@ from frontend.helpers import (
     reset_session_state,
     save_feedback,
     create_sample_query_actions,
-    create_rating_actions
+    create_rating_actions,
+    create_new_session
 )
 
 
@@ -116,9 +117,9 @@ async def on_message(message: cl.Message):
                 user_context={'timestamp': message.created_at}
             )
 
-            # --- HANDLE INVALID REQUEST (question_id == -1) ---
-            if response.get("question_id") == -1:
-                step.output = "Irrelevant request detected."
+            # --- HANDLE OUT-OF-SCOPE REQUEST ---
+            if response.get("type") == "out_of_scope" or response.get("question_id") == -1:
+                step.output = "Out-of-scope request detected."
 
                 # Get text or use a descriptive fallback
                 reason = response.get('text')
@@ -127,8 +128,14 @@ async def on_message(message: cl.Message):
 
                 await cl.Message(content=reason, author="Assistant").send()
 
-                cl.user_session.set("clarification_complete", True)
-                await perform_soft_reset()
+                # Create a new session with timestamp-based ID and log to database
+                await create_new_session()
+                new_session_id = cl.user_session.get("id")
+                print(f"Created new session after out-of-scope query: {new_session_id}")
+
+                # Initialize the new session in the database
+                await orchestrator.session_manager.get_or_create_session(new_session_id)
+
                 return
 
             # Update normal clarification state

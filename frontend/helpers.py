@@ -16,7 +16,7 @@ async def get_or_create_session_id() -> str:
     """Get existing session ID or create a new one"""
     session_id = cl.user_session.get("id")
     if not session_id:
-        session_id = str(uuid.uuid4())
+        session_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         cl.user_session.set("id", session_id)
     return session_id
 
@@ -32,7 +32,7 @@ async def reset_session_state():
 
 async def create_new_session():
     """Create a new session ID and reset session state"""
-    new_session_id = str(uuid.uuid4())
+    new_session_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     cl.user_session.set("id", new_session_id)
     await reset_session_state()
     cl.user_session.set("welcome_shown", False)
