@@ -90,7 +90,7 @@ sustainability-related trade-offs:
 - Set:
   - `alternative_recommendation` to the city from `baseline_recommendation`
   - `alternative_explanation` explaining why it was not chosen on sustainability grounds
-
+  - Set `is_recommendation_sustainable` flag to True
 ---
 
 ### Case 2: User Explicitly Rejects Sustainability (Inferred)
@@ -107,7 +107,7 @@ If the inferred `willing_to_compromise` values indicate rejection of sustainabil
     - States that **had you expressed interest in a specific sustainability factor**,
       the sustainable city would have been recommended
     - Explains **how and why** the alternative city performs better on that factor
-
+- Set `is_recommendation_sustainable` flag to False
 Counterfactual explanations MUST be conditional and nudge-based, not prescriptive.
 
 ---
@@ -198,6 +198,7 @@ You must:
 - Include:
   - Final recommendation
   - Explanation
+  - Indicate if final recommendation is sustainable using the `is_recommendation_sustainable` flag
   - Alternative recommendation which was not chosen
   - Alternative explanation which was not chosen and why
   - Context (clarifying questions and answers)

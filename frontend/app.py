@@ -232,14 +232,24 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
         # 2. The Main Recommendations
         cfe_rec = pipeline_result.get('recommendation_shown', [])
         cfe_exp = pipeline_result.get('explanation_shown', '')
+        is_sustainable = pipeline_result.get('is_recommendation_sustainable', False)
 
-        print(f"[DEBUG] cfe_rec: {cfe_rec}, cfe_exp length: {len(cfe_exp) if cfe_exp else 0}")
+        print(f"[DEBUG] cfe_rec: {cfe_rec}, cfe_exp length: {len(cfe_exp) if cfe_exp else 0}, is_sustainable: {is_sustainable}")
 
         if cfe_rec:
             recs_formatted = ", ".join(cfe_rec) if isinstance(cfe_rec, list) else str(cfe_rec)
-            rec_message = f"### 🌟 Your Recommendations\n**Destinations:** {recs_formatted}\n\n**Why?**\n{cfe_exp}"
+
+            # Add sustainability badge if the recommendation is sustainable
+            if is_sustainable:
+                rec_message = f"### 🌟 Your Recommendations 🌱✨\n**Destinations:** {recs_formatted} **[Sustainable Choice]** 🌿\n\n**Why?**\n{cfe_exp}"
+            else:
+                rec_message = f"### 🌟 Your Recommendations\n**Destinations:** {recs_formatted}\n\n**Why?**\n{cfe_exp}"
+
             print(f"[DEBUG] Sending recommendations")
             await cl.Message(content=rec_message, author="Assistant").send()
+
+            # Store for feedback question
+            cl.user_session.set("recommendation_shown", recs_formatted)
 
         # 3. Alternative Recommendation (if available)
         alt_rec = pipeline_result.get('alternative_recommendation')
@@ -249,9 +259,19 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
 
         if alt_rec:
             alt_formatted = ", ".join(alt_rec) if isinstance(alt_rec, list) else str(alt_rec)
-            alt_message = f"### 🔄 Alternative Option\n**Destinations:** {alt_formatted}\n\n**Why this alternative?**\n{alt_exp}"
+
+            # Add sustainability badge if the main recommendation is NOT sustainable
+            # (meaning the alternative is the sustainable option)
+            if not is_sustainable:
+                alt_message = f"### 🔄 Alternative Option 🌱✨\n**Destinations:** {alt_formatted} **[Sustainable Choice]** 🌿\n\n**Why this alternative?**\n{alt_exp}"
+            else:
+                alt_message = f"### 🔄 Alternative Option\n**Destinations:** {alt_formatted}\n\n**Why this alternative?**\n{alt_exp}"
+
             print(f"[DEBUG] Sending alternative recommendations")
             await cl.Message(content=alt_message, author="Assistant").send()
+
+            # Store for feedback question
+            cl.user_session.set("alternative_recommendation", alt_formatted)
 
         # 4. Trigger Feedback
         print(f"[DEBUG] Calling display_feedback_request")
@@ -316,6 +336,14 @@ async def display_current_feedback_question():
         for option in options:
             option_id = option.get("option_id")
             label = option.get("label", "")
+
+            # Dynamically populate first question (q_id: 0) with actual recommendations
+            if question_data.get("q_id") == 0 and not label:
+                if option_id == 1:
+                    label = cl.user_session.get("recommendation_shown", "Option 1")
+                elif option_id == 2:
+                    label = cl.user_session.get("alternative_recommendation", "Option 2")
+
             actions.append(
                 cl.Action(
                     name="feedback_option",

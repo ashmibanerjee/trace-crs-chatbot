@@ -1,6 +1,13 @@
-[
-  {
+[{
     "q_id": 0,
+    "question": "### 🎯 Recommendation Relevance\n Which recommendation did you like more?",
+    "options": [
+      {"option_id": 1, "label": ""},
+      {"option_id": 2, "label": ""}
+    ]
+  },
+  {
+    "q_id": 1,
     "question": "### 🎯 Recommendation Relevance\nHow relevant were the suggested cities to your interests and preferences?",
     "options": [
       {"option_id": 1, "label": "⭐️ Irrelevant"},
@@ -11,7 +18,7 @@
     ]
   },
   {
-    "q_id": 1,
+    "q_id": 2,
     "question": "### 💬 Clarifying Questions\nHow well did the system's questions capture your sustainability and travel priorities?",
     "options": [
       {"option_id": 1, "label": "⭐️ Not at all"},
@@ -22,7 +29,7 @@
     ]
   },
   {
-    "q_id": 2,
+    "q_id": 3,
     "question": "### 💡 Explanation Quality\nHow clear and persuasive was the explanation provided for each recommendation?",
     "options": [
       {"option_id": 1, "label": "⭐️ Confusing"},
@@ -33,7 +40,7 @@
     ]
   },
   {
-    "q_id": 3,
+    "q_id": 4,
     "question": "### 🌍 Sustainable Nudge\nDid the 'sustainable alternatives' or counterfactual suggestions make you reconsider your choice?",
     "options": [
       {"option_id": 1, "label": "⭐️ No impact"},
@@ -44,7 +51,7 @@
     ]
   },
   {
-    "q_id": 4,
+    "q_id": 5,
     "question": "### 📝 Additional Feedback\nDo you have any other comments or suggestions to improve these recommendations?",
     "options": []
   }

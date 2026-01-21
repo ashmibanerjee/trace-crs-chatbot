@@ -38,6 +38,10 @@ class CFEOutput(BaseModel):
         ...,
         description="Final recommended city or list of cities after CFE analysis"
     )
+    is_recommendation_sustainable: bool = Field(
+        ...,
+        description="Indicates if the final recommendation is sustainable based on environmental criteria"
+    )
 
     explanation_shown: str = Field(
         ...,

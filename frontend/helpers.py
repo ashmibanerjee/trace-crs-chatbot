@@ -38,6 +38,8 @@ async def reset_session_state():
     cl.user_session.set("current_feedback_question_index", 0)
     cl.user_session.set("waiting_for_feedback_text", False)
     cl.user_session.set("original_query", None)
+    cl.user_session.set("recommendation_shown", None)
+    cl.user_session.set("alternative_recommendation", None)
 
 
 async def create_new_session():
