@@ -7,7 +7,10 @@ from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.recsys.agent import get_recsys_agent
 from backend.adk.assembly.pipeline import get_root_agent
 from backend.adk.assembly.run import _call_agent_async, get_model_response
-from backend.schema.schema import CQOutput, RecsysOutput, IntentClassificationOutput, CFEOutput, CFEContext, RecommendationContext
+from backend.schema.cfe import CFEOutput, CFEContext
+from backend.schema.recSys import RecsysOutput, RecommendationContext
+from backend.schema.intentClassifier import IntentClassificationOutput
+from backend.schema.cqGen import CQOutput
 from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_questions
 import json
 from utils.firestore_utils import ingest_response_firestore, get_firestore_client

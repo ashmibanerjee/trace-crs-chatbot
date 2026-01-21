@@ -3,7 +3,7 @@ from jinja2 import Environment, FileSystemLoader
 from dotenv import load_dotenv
 import os
 
-from backend.schema.schema import CQOutput
+from backend.schema.cqGen import CQOutput
 
 load_dotenv()
 

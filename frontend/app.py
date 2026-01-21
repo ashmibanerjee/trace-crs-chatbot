@@ -219,10 +219,10 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
     """Display the results from the pipeline execution"""
     try:
         print(f"[DEBUG] display_pipeline_results called")
-        context = pipeline_result.get('context', {})
+        context = pipeline_result.get('context') or {}
 
         # 1. Persona Info
-        intent_classification = context.get('intent_classification')
+        intent_classification = context.get('intent_classification') if context else None
         if intent_classification:
             persona = intent_classification.get('user_travel_persona', 'Traveler')
             intent_text = f"### 🎯 Your Travel Profile\n**Persona:** {persona}"
@@ -230,8 +230,8 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
             await cl.Message(content=intent_text, author="Assistant").send()
 
         # 2. The Main Recommendations
-        cfe_rec = pipeline_result.get('cfe_recommendation', [])
-        cfe_exp = pipeline_result.get('cfe_explanation', '')
+        cfe_rec = pipeline_result.get('recommendation_shown', [])
+        cfe_exp = pipeline_result.get('explanation_shown', '')
 
         print(f"[DEBUG] cfe_rec: {cfe_rec}, cfe_exp length: {len(cfe_exp) if cfe_exp else 0}")
 
@@ -241,7 +241,19 @@ async def display_pipeline_results(pipeline_result: Dict[str, Any]):
             print(f"[DEBUG] Sending recommendations")
             await cl.Message(content=rec_message, author="Assistant").send()
 
-        # 3. Trigger Feedback
+        # 3. Alternative Recommendation (if available)
+        alt_rec = pipeline_result.get('alternative_recommendation')
+        alt_exp = pipeline_result.get('alternative_explanation', '')
+
+        print(f"[DEBUG] alt_rec: {alt_rec}, alt_exp length: {len(alt_exp) if alt_exp else 0}")
+
+        if alt_rec:
+            alt_formatted = ", ".join(alt_rec) if isinstance(alt_rec, list) else str(alt_rec)
+            alt_message = f"### 🔄 Alternative Option\n**Destinations:** {alt_formatted}\n\n**Why this alternative?**\n{alt_exp}"
+            print(f"[DEBUG] Sending alternative recommendations")
+            await cl.Message(content=alt_message, author="Assistant").send()
+
+        # 4. Trigger Feedback
         print(f"[DEBUG] Calling display_feedback_request")
         await display_feedback_request()
 

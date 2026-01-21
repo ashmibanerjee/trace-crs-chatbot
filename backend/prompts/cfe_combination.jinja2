@@ -74,18 +74,22 @@ This inference MUST be made **even if the user does not explicitly say**
 
 ## Core Recommendation Logic
 
-You MUST recommend **exactly ONE city**.
+You MUST recommend **exactly ONE city** in `recommendation_shown` and
+follow it up with a corresponding explanation in the `explanation_shown` field.
 
 ### Case 1: User Is Open to Sustainability
 
 If the inferred `willing_to_compromise` values indicate openness to
 sustainability-related trade-offs:
 
-- Recommend `SUSTAINABLE_CITY`
-- Provide a **direct explanation** that:
-  - Explicitly references the user’s sustainability-related answers
-  - Clearly explains **why the sustainable city is preferable to the baseline**
-  - Highlights at least one sustainability advantage over `BASELINE_CITY`
+- Set `recommendation_shown` to the city from `context_aware_recommendation`
+- Populate `explanation_shown` with a **direct explanation** that:
+  - Explicitly references the sustainability-related answers
+  - Explains why the sustainable city is preferable to the baseline
+  - Highlights **at least one concrete sustainability advantage**
+- Set:
+  - `alternative_recommendation` to the city from `baseline_recommendation`
+  - `alternative_explanation` explaining why it was not chosen on sustainability grounds
 
 ---
 
@@ -93,13 +97,16 @@ sustainability-related trade-offs:
 
 If the inferred `willing_to_compromise` values indicate rejection of sustainability:
 
-- Recommend `BASELINE_CITY`
-- Provide a **counterfactual explanation** that:
-  - Acknowledges the user’s stated priorities
-  - Explicitly states that **had the user expressed interest in a specific
-    sustainability factor**, they would have been recommended `SUSTAINABLE_CITY`
-  - Explains *how and why* `SUSTAINABLE_CITY` would have been more sustainable
-    along that factor
+
+- Set `recommendation_shown` to the city from `baseline_recommendation`
+- Populate `explanation_shown` acknowledging alignment with your stated priorities
+- Set:
+  - `alternative_recommendation` to the city from `context_aware_recommendation`
+  - `alternative_explanation` as a **counterfactual explanation** that:
+    - Is conditional and nudge-based (not prescriptive)
+    - States that **had you expressed interest in a specific sustainability factor**,
+      the sustainable city would have been recommended
+    - Explains **how and why** the alternative city performs better on that factor
 
 Counterfactual explanations MUST be conditional and nudge-based, not prescriptive.
 
@@ -115,7 +122,7 @@ If **either `BASELINE_CITY` or `SUSTAINABLE_CITY` is `null`**, you MUST:
    - Persona
    - `willing_to_compromise` values
 
-2. Generate **exactly two cities** from the City Catalog:
+2. Generate **exactly two cities** from the City Catalog (MANDATORY):
    - One **baseline** city:
      - More popular, conventional, or demand-heavy
      - Not optimized for sustainability
@@ -161,9 +168,9 @@ Every explanation (direct or counterfactual) MUST:
    - “had the user expressed interest in…”
 
 City-only descriptions without user grounding are INVALID.
-4. In the explanation field, use **bolding** for specific city names and for important sustainability facts
-such that they stand out clearly. If the explanation is counterfactual,
-the explanation should be in a different paragraph.
+4. In the explanation field, use **bolding** for specific city names and for
+important sustainability facts
+such that they stand out clearly.
 5. The explanation must be generated in 2nd person (i.e., addressing the user as "you").
 
 ---
@@ -179,7 +186,7 @@ Given:
 
 You must:
 - Produce **one final city recommendation**
-- Provide a **direct or counterfactual explanation**
+- Provide a **direct or counterfactual explanation** along with the alternative
 - Respect inferred sustainability preferences
 - Apply counterfactual nudging only when appropriate
 
@@ -191,14 +198,17 @@ You must:
 - Include:
   - Final recommendation
   - Explanation
+  - Alternative recommendation which was not chosen
+  - Alternative explanation which was not chosen and why
   - Context (clarifying questions and answers)
 - The context CANNOT be omitted and must reflect the full user interaction in the requested schema.
 ---
 
 ## Additional Constraints
 
-- `"recommendation"` MUST contain only city names
-- `"trade-off"` MUST be empty or omitted if none is required
+- `"recommendation"` MUST contain only city names from the City Catalog
+- Explanations MUST follow the Explanation Constraints (STRICT) above
+- Ensure clarity, conciseness, and relevance in explanations
 - Output ONLY valid JSON
 - No markdown, no commentary, no explanations outside JSON
 

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 
 from backend.adk.tools.cfe import cfe_callback
-from backend.schema.schema import CFEOutput
+from backend.schema.cfe import CFEOutput
 
 load_dotenv()
 

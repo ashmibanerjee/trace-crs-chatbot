@@ -7,11 +7,12 @@ import asyncio
 from dotenv import load_dotenv
 import os
 import json
-from backend.schema.schema import (
-    IntentClassificationOutput,
-    RecsysOutput,
+from backend.schema.cfe import (
     CFEOutput
 )
+from backend.schema.recSys import RecsysOutput
+from backend.schema.intentClassifier import IntentClassificationOutput
+
 load_dotenv()
 
 APP_NAME = "crs-chat_app"

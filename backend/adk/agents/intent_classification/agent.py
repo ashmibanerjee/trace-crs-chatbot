@@ -3,7 +3,7 @@ from pathlib import Path
 from google.adk.agents.llm_agent import Agent
 from jinja2 import Environment, FileSystemLoader
 from backend.adk.tools.intent_classifier import check_clarification_status_callback
-from backend.schema.schema import IntentClassificationOutput
+from backend.schema.intentClassifier import IntentClassificationOutput
 from dotenv import load_dotenv
 
 load_dotenv()

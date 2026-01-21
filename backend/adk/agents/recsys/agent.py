@@ -11,7 +11,7 @@ load_dotenv()
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "../../../prompts/")
 ENV = Environment(loader=FileSystemLoader(PROMPT_DIR))
 
-from backend.schema.schema import RecsysOutput
+from backend.schema.recSys import RecsysOutput
 
 
 async def get_recsys_agent(has_context: bool = False):

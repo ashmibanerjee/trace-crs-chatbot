@@ -9,7 +9,7 @@ from backend.adk.agents.intent_classification.agent import get_ic_agent
 from backend.adk.agents.recsys.agent import get_recsys_agent
 from backend.adk.agents.clar_q_gen.agent import get_cq_agent
 from backend.adk.agents.cfe.agent import get_cfe_agent
-from backend.schema.schema import CFEOutput
+from backend.schema.cfe import CFEOutput
 
 load_dotenv()
 

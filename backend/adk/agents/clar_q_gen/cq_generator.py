@@ -10,7 +10,7 @@ if PROJECT_ROOT not in sys.path:
 
 from backend.adk.assembly.run import _call_agent_async
 from backend.adk.agents.clar_q_gen.agent import get_cq_agent
-from backend.schema.schema import ClarifyingQuestion, CQOutput
+from backend.schema.cqGen import ClarifyingQuestion, CQOutput
 
 
 def format_question(question_data: Dict[str, Any]) -> Dict[str, Any]:
