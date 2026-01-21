@@ -359,7 +359,7 @@ async def display_current_feedback_question():
         res = await cl.AskActionMessage(
             content=question_text,
             actions=actions,
-            timeout=300  # 5 minutes timeout
+            timeout=600  # 10 minutes timeout
         ).send()
 
         print(f"[DEBUG] User selected res: {res}")
