@@ -338,11 +338,13 @@ async def display_current_feedback_question():
             label = option.get("label", "")
 
             # Dynamically populate first question (q_id: 0) with actual recommendations
-            if question_data.get("q_id") == 0 and not label:
+            if question_data.get("q_id") == 0:
                 if option_id == 1:
-                    label = cl.user_session.get("recommendation_shown", "Option 1")
+                    city_name = cl.user_session.get("recommendation_shown", "Option 1")
+                    label = f"1️⃣ {city_name} (recommended)"
                 elif option_id == 2:
-                    label = cl.user_session.get("alternative_recommendation", "Option 2")
+                    city_name = cl.user_session.get("alternative_recommendation", "Option 2")
+                    label = f"2️⃣ {city_name} (alternative)"
 
             actions.append(
                 cl.Action(

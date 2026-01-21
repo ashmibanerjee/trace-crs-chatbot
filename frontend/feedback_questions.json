@@ -8,50 +8,39 @@
   },
   {
     "q_id": 1,
-    "question": "### 🎯 Recommendation Relevance\nHow relevant were the suggested cities to your interests and preferences?",
+    "question": "### 💬 Clarifying Questions\nHow effective were the questions used to clarify information prior to generating the recommendation?",
     "options": [
-      {"option_id": 1, "label": "⭐️ Irrelevant"},
-      {"option_id": 2, "label": "⭐️⭐️ Poor"},
-      {"option_id": 3, "label": "⭐️⭐️⭐️ Neutral"},
-      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Relevant"},
-      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Very Relevant"}
+      {"option_id": 1, "label": "⭐️ Not at all"},
+      {"option_id": 2, "label": "⭐️⭐️ Slightly"},
+      {"option_id": 3, "label": "⭐️⭐️⭐️ Moderately"},
+      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Very well"},
+      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Extremely"}
     ]
   },
   {
     "q_id": 2,
-    "question": "### 💬 Clarifying Questions\nHow well did the system's questions capture your sustainability and travel priorities?",
+    "question": "### 💡 Explanation Quality\nHow clear and useful were the explanations provided for each recommendation?",
     "options": [
       {"option_id": 1, "label": "⭐️ Not at all"},
-      {"option_id": 2, "label": "⭐️⭐️ Poorly"},
-      {"option_id": 3, "label": "⭐️⭐️⭐️ Fair"},
-      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Well"},
-      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Perfectly"}
+      {"option_id": 2, "label": "⭐️⭐️ Slightly"},
+      {"option_id": 3, "label": "⭐️⭐️⭐️ Moderately"},
+      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Very well"},
+      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Extremely"}
     ]
   },
   {
     "q_id": 3,
-    "question": "### 💡 Explanation Quality\nHow clear and persuasive was the explanation provided for each recommendation?",
+    "question": "### \uD83D\uDD04 Alternative Option\nDid the alternative or counterfactual suggestion make you reconsider your choice?",
     "options": [
-      {"option_id": 1, "label": "⭐️ Confusing"},
-      {"option_id": 2, "label": "⭐️⭐️ Unclear"},
-      {"option_id": 3, "label": "⭐️⭐️⭐️ Helpful"},
-      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Convincing"},
-      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Excellent"}
+           {"option_id": 1, "label": "⭐️ Not at all"},
+      {"option_id": 2, "label": "⭐️⭐️ Slightly"},
+      {"option_id": 3, "label": "⭐️⭐️⭐️ Moderately"},
+      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Very well"},
+      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Extremely"}
     ]
   },
   {
     "q_id": 4,
-    "question": "### 🌍 Sustainable Nudge\nDid the 'sustainable alternatives' or counterfactual suggestions make you reconsider your choice?",
-    "options": [
-      {"option_id": 1, "label": "⭐️ No impact"},
-      {"option_id": 2, "label": "⭐️⭐️ Slightly curious"},
-      {"option_id": 3, "label": "⭐️⭐️⭐️ Informative"},
-      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Rethink choice"},
-      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Changed my mind"}
-    ]
-  },
-  {
-    "q_id": 5,
     "question": "### 📝 Additional Feedback\nDo you have any other comments or suggestions to improve these recommendations?",
     "options": []
   }
