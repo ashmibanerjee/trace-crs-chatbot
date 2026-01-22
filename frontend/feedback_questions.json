@@ -30,7 +30,7 @@
   },
   {
     "q_id": 3,
-    "question": "### \uD83D\uDD04 Alternative Option\nDid the alternative or counterfactual suggestion make you reconsider your choice?",
+    "question": "### \uD83D\uDD04 Alternative Option\nDid the alternative make you reconsider your choice?",
     "options": [
            {"option_id": 1, "label": "⭐️ Not at all"},
       {"option_id": 2, "label": "⭐️⭐️ Slightly"},
