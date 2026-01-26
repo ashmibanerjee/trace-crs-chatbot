@@ -238,3 +238,6 @@ backend/adk/agents/intent_classification/.adk/
 backend/.DS_Store
 google-cloud-sdk/
 !frontend/feedback_questions.json
+
+# project specific
+data/
