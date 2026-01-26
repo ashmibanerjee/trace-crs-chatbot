@@ -28,17 +28,17 @@
       {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Extremely"}
     ]
   },
-  {
-    "q_id": 3,
-    "question": "### \uD83D\uDD04 Alternative Option\nDid the alternative make you reconsider your choice?",
-    "options": [
-           {"option_id": 1, "label": "⭐️ Not at all"},
-      {"option_id": 2, "label": "⭐️⭐️ Slightly"},
-      {"option_id": 3, "label": "⭐️⭐️⭐️ Moderately"},
-      {"option_id": 4, "label": "⭐️⭐️⭐️⭐️ Very well"},
-      {"option_id": 5, "label": "⭐️⭐️⭐️⭐️⭐️ Extremely"}
-    ]
-  },
+{
+  "q_id": 3,
+  "question": "🔄 Alternative Option\nDid the alternative make you reconsider your choice?",
+  "options": [
+    { "option_id": 1, "label": "⚪⚪⚪⚪⚪ Not at all" },
+    { "option_id": 2, "label": "⚫⚪⚪⚪⚪ Slightly" },
+    { "option_id": 3, "label": "⚫⚫⚪⚪⚪ Moderately" },
+    { "option_id": 4, "label": "⚫⚫⚫⚫⚪ Strongly" },
+    { "option_id": 5, "label": "⚫⚫⚫⚫⚫ Extremely" }
+  ]
+},
   {
     "q_id": 4,
     "question": "### 📝 Additional Feedback\nDo you have any other comments or suggestions to improve these recommendations?",
