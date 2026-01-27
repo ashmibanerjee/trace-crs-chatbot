@@ -35,19 +35,19 @@ def set_paper_style():
     plt.rcParams.update({
         'font.family': 'sans-serif',
         'font.weight': 'bold',
-        'font.size': 16,
-        'axes.labelsize': 18,
+        'font.size': 20,
+        'axes.labelsize': 22,
         'axes.labelweight': 'bold',
-        'axes.titlesize': 20,
+        'axes.titlesize': 24,
         'axes.titleweight': 'bold',
-        'axes.linewidth': 1.5,
+        'axes.linewidth': 2.0,
         'axes.labelcolor': 'black',
-        'xtick.labelsize': 14,
+        'xtick.labelsize': 18,
         'xtick.color': 'black',
-        'ytick.labelsize': 14,
+        'ytick.labelsize': 18,
         'ytick.color': 'black',
         'text.color': 'black',
-        'legend.fontsize': 14,
+        'legend.fontsize': 18,
         'legend.frameon': True,
         'legend.framealpha': 0.9,
         'legend.edgecolor': 'gray',
@@ -104,14 +104,14 @@ def process_feedback_data(data):
 
 def plot_relevance(counts):
     """Plot Q0: Recommendation Relevance."""
-    plt.figure(figsize=(22,12))
+    plt.figure(figsize=(6,6))
     labels = ['Recommended', 'Alternative']
     
     total = sum(counts.values())
     total = total if total > 0 else 1
     values = [counts[1] / total * 100, counts[2] / total * 100]
     
-    bars = plt.bar(labels, values, color=['#4CAF50', '#2196F3'])
+    bars = plt.bar(labels, values, width=0.5, color=['#4CAF50', '#2196F3'])
 
     plt.ylabel('Percentage of Responses (%)', fontweight='bold')
     plt.ylim(0, 110)
@@ -124,7 +124,7 @@ def plot_relevance(counts):
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:.1f}',
-                ha='center', va='bottom', fontsize=18, fontweight='bold')
+                ha='center', va='bottom', fontsize=24, fontweight='bold')
     plt.savefig(os.path.join(OUTPUT_DIR + "/pdf", 'q0_relevance.pdf'), bbox_inches='tight', dpi=300)
     if PAPER_PLOTS_DIR:
         shutil.copy(os.path.join(OUTPUT_DIR + "/pdf", 'q0_relevance.pdf'), PAPER_PLOTS_DIR)
@@ -182,13 +182,13 @@ def plot_combined_likert(clarity_counts, explanation_counts, alternative_counts)
     for i, (v1, v2, v3) in enumerate(zip(q1_pcts, q2_pcts, q3_pcts)):
         # Q1 Label
         if v1 > 0:
-            plt.text(v1/2, i, f"{v1:.1f}", ha='center', va='center', fontsize=16, fontweight='bold', color='black')
+            plt.text(v1/2, i, f"{v1:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
         # Q2 Label
         if v2 > 0:
-            plt.text(v1 + v2/2, i, f"{v2:.1f}", ha='center', va='center', fontsize=16, fontweight='bold', color='black')
+            plt.text(v1 + v2/2, i, f"{v2:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
         # Q3 Label
         if v3 > 0:
-            plt.text(v1 + v2 + v3/2, i, f"{v3:.1f}", ha='center', va='center', fontsize=16, fontweight='bold', color='black')
+            plt.text(v1 + v2 + v3/2, i, f"{v3:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
             
     plt.tight_layout()
     plt.savefig(os.path.join(OUTPUT_DIR + "/pdf", 'combined_q1_q3_stacked.pdf'), bbox_inches='tight', dpi=300)
