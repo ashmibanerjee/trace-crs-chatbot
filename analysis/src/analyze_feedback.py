@@ -1,64 +1,12 @@
-import json
 import matplotlib.pyplot as plt
 import os
-import seaborn as sns
-import dotenv
-import shutil
-dotenv.load_dotenv()
-
+from plot_utils import (
+    load_json, DATA_PATH, OUTPUT_DIR, set_paper_style, save_plot
+)
 
 # Configuration
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
-
-DATA_PATH = os.path.join(PROJECT_ROOT, 'data', 'trace-crs-chatbot', 'merged', 'combined_collections.json')
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 QUESTIONS_PATH = os.path.join(PROJECT_ROOT, 'frontend', 'feedback_questions.json')
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'plots')
-PAPER_LOCATION = os.getenv('PAPER_LOCATION')
-PAPER_PLOTS_DIR = os.path.join(PAPER_LOCATION, 'plots') if PAPER_LOCATION else None
-
-def load_json(path):
-    """Load JSON data from a file."""
-    with open(path, 'r') as f:
-        return json.load(f)
-
-def ensure_dir(directory):
-    """Ensure that a directory exists."""
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-def set_paper_style():
-    """Set matplotlib style for publication-quality figures."""
-    sns.set_theme(style="whitegrid")
-    
-    # Paper-quality font settings
-    plt.rcParams.update({
-        'font.family': 'sans-serif',
-        'font.weight': 'bold',
-        'font.size': 20,
-        'axes.labelsize': 22,
-        'axes.labelweight': 'bold',
-        'axes.titlesize': 24,
-        'axes.titleweight': 'bold',
-        'axes.linewidth': 2.0,
-        'axes.labelcolor': 'black',
-        'xtick.labelsize': 18,
-        'xtick.color': 'black',
-        'ytick.labelsize': 18,
-        'ytick.color': 'black',
-        'text.color': 'black',
-        'legend.fontsize': 18,
-        'legend.frameon': True,
-        'legend.framealpha': 0.9,
-        'legend.edgecolor': 'gray',
-        'figure.titlesize': 20,
-        'lines.linewidth': 2.5,
-        'lines.markersize': 8,
-        'pdf.fonttype': 42,
-        'ps.fonttype': 42,
-        'grid.alpha': 0.3,
-        'figure.max_open_warning': 0
-    })
 
 def process_feedback_data(data):
     """Process feedback data and return counts for each question type."""
@@ -125,14 +73,8 @@ def plot_relevance(counts):
         plt.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:.1f}',
                 ha='center', va='bottom', fontsize=24, fontweight='bold')
-    plt.savefig(os.path.join(OUTPUT_DIR + "/pdf", 'q0_relevance.pdf'), bbox_inches='tight', dpi=300)
-    if PAPER_PLOTS_DIR:
-        shutil.copy(os.path.join(OUTPUT_DIR + "/pdf", 'q0_relevance.pdf'), PAPER_PLOTS_DIR)
-        print(f"Copied q0_relevance.pdf to {PAPER_PLOTS_DIR}")
-    plt.title('Preference: Recommended vs Alternative (Q0)', fontweight='bold')
-    plt.savefig(os.path.join(OUTPUT_DIR+"/png", 'q0_relevance.png'), bbox_inches='tight', dpi=300)
-
-    plt.close()
+    
+    save_plot('q0_relevance', 'Preference: Recommended vs Alternative (Q0)')
 
 def plot_combined_likert(clarity_counts, explanation_counts, alternative_counts):
     """Plot combined horizontal stacked bar chart for Q1-Q3."""
@@ -158,7 +100,7 @@ def plot_combined_likert(clarity_counts, explanation_counts, alternative_counts)
     q2_pcts = [explanation_counts[i] / q2_total * 100 for i in range(1, 6)]
     q3_pcts = [alternative_counts[i] / q3_total * 100 for i in range(1, 6)]
     
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(12, 6))
     
     bar_width = 0.5
     indices = range(len(category_labels))
@@ -191,15 +133,7 @@ def plot_combined_likert(clarity_counts, explanation_counts, alternative_counts)
             plt.text(v1 + v2 + v3/2, i, f"{v3:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
             
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR + "/pdf", 'combined_q1_q3_stacked.pdf'), bbox_inches='tight', dpi=300)
-    if PAPER_PLOTS_DIR:
-        shutil.copy(os.path.join(OUTPUT_DIR + "/pdf", 'combined_q1_q3_stacked.pdf'), PAPER_PLOTS_DIR)
-        print(f"Copied combined_q1_q3_stacked.pdf to {PAPER_PLOTS_DIR}")
-    plt.title('Combined Feedback Distribution by Rating Category', fontweight='bold')
-    plt.savefig(os.path.join(OUTPUT_DIR+"/png", 'combined_q1_q3_stacked.png'), bbox_inches='tight', dpi=300)
-
-
-    plt.close()
+    save_plot('combined_q1_q3_stacked', 'Combined Feedback Distribution by Rating Category')
 
 def analyze_feedback():
     print(f"Loading data from {DATA_PATH}")
@@ -218,7 +152,6 @@ def analyze_feedback():
     print("Explanation Counts:", explanation)
     print("Alternative Counts:", alternative)
 
-    ensure_dir(OUTPUT_DIR)
     set_paper_style()
     
     # Generate Plots
