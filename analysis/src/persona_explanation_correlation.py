@@ -1,11 +1,12 @@
 import json
 import os
 import pandas as pd
-import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from analysis.src.utils import extract_persona_explanation_pairs
 
 # Set paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,35 +26,6 @@ def load_data(file_path):
     with open(file_path, 'r') as f:
         return json.load(f)
 
-def extract_persona_explanation_pairs(data):
-    pairs = []
-    for session in data:
-        for cfe in session.get('cfe_responses', []):
-            context = cfe.get('context')
-            if not context:
-                continue
-                
-            intent_classification = context.get('intent_classification')
-            if not intent_classification:
-                continue
-                
-            persona = intent_classification.get('user_travel_persona')
-            explanation = cfe.get('explanation_shown')
-            travel_intent = intent_classification.get('travel_intent')
-            alternative_explanations = cfe.get('alternative_explanation')
-            alternative_shown = cfe.get('alternative_recommendation')
-            
-            if persona and explanation:
-                pairs.append({
-                    'session_id': session.get('session_id'),
-                    'persona': persona,
-                    'travel_intent': travel_intent,
-                    'explanation': explanation,
-                    'recommendation': cfe.get('recommendation_shown'),
-                    'alternative_shown': alternative_shown,
-                    'alternative_explanation': alternative_explanations
-                })
-    return pairs
 
 def run_correlation_analysis():
     print("Loading data...")
