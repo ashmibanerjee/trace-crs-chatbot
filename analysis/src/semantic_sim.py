@@ -49,6 +49,10 @@ def run_evaluation():
     df['total_explanation'] = df['explanation_shown'] + " " + df['alternative_explanation']
     df['total_explanation_clean'] = df['explanation_clean'] + " " + df['alt_explanation_clean']
 
+    df["lorem_ipsum"] = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+    similarities = generate_similarity(df, model, col1 = "conversation_clean", col2="lorem_ipsum")
+    print (f"Mean similarity between Conversations (C+CQA) and Lorem Ipsum: {np.mean(similarities):.4f} ({np.std(similarities):.4f}) ")
+
     similarities = generate_similarity(df, model, col1 = "total_explanation_clean", col2="conversation_clean")
 
     print(f"Mean similarity between Conversations (C+CQA) and Explanations (CFE + AE): {np.mean(similarities):.4f} ({np.std(similarities):.4f}) ")
@@ -73,6 +77,7 @@ def generate_similarity(df: DataFrame, model: SentenceTransformer, col1:str = ""
         )[0][0]
         similarities.append(sim)
     return similarities
+
 
 
 
