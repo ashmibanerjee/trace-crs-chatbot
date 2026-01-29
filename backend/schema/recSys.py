@@ -39,22 +39,6 @@ class RecsysOutput(BaseModel):
         description="Status indicating whether the recommendation response was successfully ingested into the database."
     )
 
-    @field_validator('recommendation')
-    @classmethod
-    def validate_cities(cls, v):
-        """Validate that all recommended cities are in the CITIES list."""
-        cities_to_check = [v] if isinstance(v, str) else v
-
-        invalid_cities = [city for city in cities_to_check if city not in CITIES]
-
-        if invalid_cities:
-            raise ValueError(
-                f"Invalid city/cities in recommendation: {', '.join(invalid_cities)}. "
-                f"Must be one of the cities from the CITIES list."
-            )
-
-        return v
-
 
 class RecommendationContext(BaseModel):
     """
