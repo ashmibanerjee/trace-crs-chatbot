@@ -241,3 +241,4 @@ google-cloud-sdk/
 
 # project specific
 data/
+.vscode
