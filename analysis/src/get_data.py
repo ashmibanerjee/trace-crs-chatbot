@@ -29,7 +29,7 @@ try:
         print(f"Fetching all documents from collection: {COLLECTION_PATH}...")
         print("This may take a moment and will incur read costs.")
 
-            # Get a reference to the collection and stream the documents
+        # Get a reference to the collection and stream the documents
         docs = db.collection(COLLECTION_PATH).stream()
         all_docs = []
         doc_count = 0
