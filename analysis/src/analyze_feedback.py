@@ -118,19 +118,19 @@ def plot_combined_likert(clarity_counts, explanation_counts, alternative_counts)
     plt.xlabel('Percentage of Responses (%)', fontweight='bold')
     plt.yticks(indices, category_labels, fontweight='bold')
     plt.xticks(fontweight='bold')
-    plt.legend()
+    plt.legend(loc='center right', bbox_to_anchor=(1, 0.5), fontsize=16)
     
     # Add percentage labels inside bars
     for i, (v1, v2, v3) in enumerate(zip(q1_pcts, q2_pcts, q3_pcts)):
         # Q1 Label
         if v1 > 0:
-            plt.text(v1/2, i, f"{v1:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
+            plt.text(v1/2, i, f"{v1:.1f}", ha='center', va='center', fontsize=16, fontweight='bold', color='black')
         # Q2 Label
         if v2 > 0:
-            plt.text(v1 + v2/2, i, f"{v2:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
+            plt.text(v1 + v2/2, i, f"{v2:.1f}", ha='center', va='center', fontsize=16, fontweight='bold', color='black')
         # Q3 Label
         if v3 > 0:
-            plt.text(v1 + v2 + v3/2, i, f"{v3:.1f}", ha='center', va='center', fontsize=20, fontweight='bold', color='black')
+            plt.text(v1 + v2 + v3/2, i, f"{v3:.1f}", ha='center', va='center', fontsize=16, fontweight='bold', color='black')
             
     plt.tight_layout()
     save_plot('combined_q1_q3_stacked', 'Combined Feedback Distribution by Rating Category')
