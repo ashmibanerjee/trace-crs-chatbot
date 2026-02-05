@@ -135,6 +135,112 @@ def plot_combined_likert(clarity_counts, explanation_counts, alternative_counts)
     plt.tight_layout()
     save_plot('combined_q1_q3_stacked', 'Combined Feedback Distribution by Rating Category')
 
+def plot_pivoted_likert(clarity_counts, explanation_counts, alternative_counts):
+    """Plot horizontal stacked Likert chart pivoted by question."""
+
+    questions = [
+        "Q1: \nClarifying \nQuestions \nQuality",
+        "Q2: \nExplanation \nQuality",
+        "Q3: \nChoice \nReconsideration \nLevel"
+    ]
+
+    counts = [
+        clarity_counts,
+        explanation_counts,
+        alternative_counts
+    ]
+
+    totals = [sum(c.values()) or 1 for c in counts]
+
+    # Likert labels and colors (1 → 5)
+    likert_labels = [
+        "1 - Not at all",
+        "2 - Slightly",
+        "3 - Moderately",
+        "4 - Very well / Strongly",
+        "5 - Extremely"
+    ]
+
+    likert_colors = [
+        "#D73027",
+        "#FC8D59",
+        "#FEE08B",
+        "#91BFDB",
+        "#4575B4"
+    ]
+
+    # Percentages per question
+    percentages = [
+        [counts[q][i] / totals[q] * 100 for i in range(1, 6)]
+        for q in range(3)
+    ]
+
+    plt.figure(figsize=(20, 10))
+
+    indices = range(len(questions))
+    left = [0] * len(questions)
+
+    # Stack by Likert value
+    for i in range(5):
+        values = [percentages[q][i] for q in range(3)]
+
+        plt.barh(
+            indices,
+            values,
+            left=left,
+            color=likert_colors[i],
+            label=likert_labels[i]
+        )
+
+        LABEL_THRESHOLD = 3.0  # percent
+
+        for y, (l, v) in enumerate(zip(left, values)):
+            if v >= LABEL_THRESHOLD:
+                plt.text(
+                    l + v / 2,
+                    y,
+                    f"{v:.1f}",
+                    ha="center",
+                    va="center",
+                    fontsize=22,
+                    fontweight="bold"
+                )
+
+        # # Labels inside bars
+        # for y, (l, v) in enumerate(zip(left, values)):
+        #     if v > 0:
+        #         plt.text(
+        #             l + v / 2,
+        #             y,
+        #             f"{v:.1f}",
+        #             ha="center",
+        #             va="center",
+        #             fontsize=22,
+        #             fontweight="bold"
+        #         )
+
+        left = [l + v for l, v in zip(left, values)]
+
+    plt.xlabel("Percentage of Responses (%)", fontweight="bold")
+    plt.yticks(indices, questions, fontsize=22, fontweight="bold")
+    plt.gca().invert_yaxis()
+    plt.xticks(fontweight="bold")
+
+    plt.xlim(0, 130)
+    plt.xticks(range(0, 110, 20))  # only show 0–100
+
+    plt.legend(
+        title="Response",
+        loc="center right",
+        frameon=True,
+        framealpha=0.95, 
+        fontsize=18
+    )
+
+    plt.tight_layout()
+    save_plot("combined_q1_q3_stacked_pivot", "Feedback Distribution by Question")
+
+
 def analyze_feedback():
     print(f"Loading data from {DATA_PATH}")
     try:
@@ -156,7 +262,8 @@ def analyze_feedback():
     
     # Generate Plots
     plot_relevance(relevance)
-    plot_combined_likert(clarity, explanation, alternative)
+    # plot_combined_likert(clarity, explanation, alternative)
+    plot_pivoted_likert(clarity, explanation, alternative)
 
     print(f"Plots saved to {OUTPUT_DIR}")
 
