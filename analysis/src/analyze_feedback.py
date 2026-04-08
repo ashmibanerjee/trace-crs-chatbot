@@ -139,9 +139,9 @@ def plot_pivoted_likert(clarity_counts, explanation_counts, alternative_counts):
     """Plot horizontal stacked Likert chart pivoted by question."""
 
     questions = [
-        "Q1: \nClarifying \nQuestions \nQuality",
-        "Q2: \nExplanation \nQuality",
-        "Q3: \nChoice \nReconsideration \nLevel"
+        "Clarifying \nQuestions \nQuality",
+        "Explanation \nQuality",
+        "Choice \nReconsideration \nLevel"
     ]
 
     counts = [
