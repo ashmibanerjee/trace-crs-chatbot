@@ -92,41 +92,7 @@ async def on_chat_start():
     session_id = await get_or_create_session_id()
     await reset_session_state()
 
-    # ---- Gemini: collect API key before doing anything else ----
-    profile = cl.user_session.get("chat_profile", PROFILE_GEMMA)
-    if profile == PROFILE_GEMINI:
-        await cl.Message(
-            content=(
-                "### Gemini Mode\n\n"
-                "To use Gemini you need to provide your own **Google Gemini API key**.\n\n"
-                "> Your key is kept in server memory for this session only. "
-                "It is **never stored to disk or logged**. "
-                "You can obtain a free key at [aistudio.google.com](https://aistudio.google.com/apikey)."
-            ),
-            author="Assistant",
-        ).send()
-
-        res = await cl.AskUserMessage(
-            content="Please paste your Gemini API key below:",
-            timeout=120,
-        ).send()
-
-        if not res or not res.get("output", "").strip():
-            await cl.Message(
-                content="No API key provided. Switching to **Gemma (Free)** mode.",
-                author="Assistant",
-            ).send()
-            cl.user_session.set("chat_profile", PROFILE_GEMMA)
-        else:
-            raw_key = res["output"].strip()
-            # Store under a private key — never echoed back to the user
-            cl.user_session.set("_gemini_api_key", raw_key)
-            await cl.Message(
-                content="✅ API key received. Starting your session...",
-                author="Assistant",
-            ).send()
-
-    # ---- Welcome message ----
+    # ---- Welcome message (shown first for all profiles) ----
     welcome_message = """# Sustainable Tourism Assistant for European Cities! 🌍✨
 
 I'm here to help you discover eco-friendly travel destinations tailored to your preferences.
@@ -148,14 +114,38 @@ Right now, I specialize in city destinations only within Europe.
 """
 
     actions = create_sample_query_actions(seed=session_id)
-
-    await cl.Message(
-        content=welcome_message,
-        author="Assistant",
-        actions=actions,
-    ).send()
-
+    await cl.Message(content=welcome_message, author="Assistant", actions=actions).send()
     cl.user_session.set("welcome_shown", True)
+
+    # ---- Gemini: collect API key after welcome ----
+    profile = cl.user_session.get("chat_profile", PROFILE_GEMMA)
+    if profile == PROFILE_GEMINI:
+        await cl.Message(
+            content=(
+                "### 🔑 Gemini API Key Required\n\n"
+                "To use Gemini you need to provide your own **Google Gemini API key**.\n\n"
+                "> Your key is kept in server memory for this session only — "
+                "**never stored to disk or logged**.\n\n"
+                "You can get a free key at [aistudio.google.com](https://aistudio.google.com/apikey)."
+            ),
+            author="Assistant",
+        ).send()
+
+        res = await cl.AskUserMessage(
+            content="Please paste your Gemini API key below:",
+            timeout=120,
+        ).send()
+
+        if not res or not res.get("output", "").strip():
+            await cl.Message(
+                content="No API key provided — falling back to **Gemma (Free)** mode.",
+                author="Assistant",
+            ).send()
+            cl.user_session.set("chat_profile", PROFILE_GEMMA)
+        else:
+            raw_key = res["output"].strip()
+            cl.user_session.set("_gemini_api_key", raw_key)
+            await cl.Message(content="✅ Key received. You can now send your query!", author="Assistant").send()
 
 
 # ---------------------------------------------------------------------------
@@ -454,4 +444,5 @@ async def on_quick_reply(action: cl.Action):
 @cl.action_callback("sample_query_3")
 async def on_sample_query(action: cl.Action):
     query = action.payload.get("query", "")
-    await cl.send_window_message({"type": "set_chat_input", "value": query})
+    await cl.Message(content=query, author="User").send()
+    await on_message(cl.Message(content=query))
