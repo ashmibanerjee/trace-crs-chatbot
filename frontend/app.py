@@ -434,7 +434,7 @@ async def on_rating_5(action: cl.Action): await handle_rating_feedback(5)
 
 async def _dispatch_query(query: str):
     """Display the selected query as a user bubble, then process it."""
-    await cl.Message(content=query, author="User").send()
+    await cl.Message(content=query, author="User", type="user_message").send()
     await on_message(cl.Message(content=query))
 
 
