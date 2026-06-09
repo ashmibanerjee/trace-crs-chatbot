@@ -435,7 +435,6 @@ async def on_rating_5(action: cl.Action): await handle_rating_feedback(5)
 @cl.action_callback("quick_reply")
 async def on_quick_reply(action: cl.Action):
     val = action.payload.get("value", "")
-    await cl.Message(content=val, author="User").send()
     await on_message(cl.Message(content=val))
 
 
@@ -444,5 +443,4 @@ async def on_quick_reply(action: cl.Action):
 @cl.action_callback("sample_query_3")
 async def on_sample_query(action: cl.Action):
     query = action.payload.get("query", "")
-    await cl.Message(content=query, author="User").send()
     await on_message(cl.Message(content=query))
