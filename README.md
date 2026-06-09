@@ -1,3 +1,13 @@
+---
+title: Sustainable Tourism CRS Chatbot
+emoji: 🌍
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🌍 Sustainable Tourism CRS Chatbot
 
 A modular Conversational Recommender System (CRS) for sustainable tourism, built with Chainlit (frontend), Google Agent Development Kit (ADK) (backend) and Firebase Firestore (storage) to to promote sustainable tourism

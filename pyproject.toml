@@ -1,0 +1,37 @@
+[project]
+name = "crs-chatbot"
+version = "0.1.0"
+description = "Sustainable Tourism Conversational Recommender System"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Frontend — pinned to patched release (2.3.0 had a known XSS vulnerability)
+    "chainlit==2.11.1",
+    # Backend API
+    "fastapi",
+    "uvicorn[standard]",
+    # Google Cloud & ADK (Gemini pipeline path)
+    "google-adk",
+    "google-cloud-firestore",
+    "google-cloud-storage",
+    # HuggingFace Inference (Gemma pipeline path)
+    "huggingface_hub>=0.26.0",
+    # Utilities
+    "python-dotenv",
+    "jinja2",
+    "pydantic",
+    "pydantic-settings",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.uv]
+# uv manages the virtual environment at .venv
+# Run:  uv sync            → install all deps
+#       uv sync --extra dev → include pytest etc.
+#       uv run uvicorn ...  → run inside the managed env
+

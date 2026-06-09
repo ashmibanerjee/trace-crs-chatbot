@@ -1,17 +1,19 @@
 # Core Application Dependencies
-# Let pip resolve all transitive dependencies automatically
 
-# Frontend
-chainlit
+# Frontend — pinned to patched release (2.3.0 had a known XSS vulnerability)
+chainlit==2.11.1
 
 # Backend API
 fastapi
 uvicorn[standard]
 
-# Google Cloud & ADK
+# Google Cloud & ADK (used for Gemini pipeline path)
 google-adk
 google-cloud-firestore
 google-cloud-storage
+
+# HuggingFace Inference (Gemma model path)
+huggingface_hub>=0.26.0
 
 # Utilities
 python-dotenv
@@ -19,7 +21,6 @@ jinja2
 pydantic
 pydantic-settings
 
-# Development/Testing (optional - can be moved to dev-requirements.txt)
+# Development/Testing
 pytest
 pytest-asyncio
-

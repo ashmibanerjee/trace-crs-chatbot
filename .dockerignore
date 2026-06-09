@@ -1,0 +1,38 @@
+# Secrets and credentials — never in image
+.env
+.env.*
+*.env
+*-secret.json
+*-credentials.json
+*-key.json
+credentials/
+crs-chatbot-application-secret.json
+
+# Large/dev-only directories
+.git/
+.gitignore
+google-cloud-sdk/
+analysis/
+plots/
+data/
+.venv/
+venv/
+.idea/
+.vscode/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# ADK local config
+backend/adk/.adk/
+backend/adk/assembly/.adk/
+backend/adk/assembly/.env
+backend/server/.env

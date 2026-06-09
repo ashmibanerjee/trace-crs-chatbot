@@ -1,6 +1,9 @@
+import asyncio
+import os
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
+from typing import Optional
 import datetime
 from backend.adk.agents.cfe.agent import get_cfe_agent
 from backend.adk.agents.intent_classification.agent import get_ic_agent
@@ -15,224 +18,224 @@ from backend.adk.agents.clar_q_gen.cq_generator import generate_clarifying_quest
 import json
 from utils.firestore_utils import ingest_response_firestore, get_firestore_client
 
-# Create a router for user endpoints
 router = APIRouter(tags=["ADK Endpoints"])
 
+# Serialize concurrent requests that swap GOOGLE_API_KEY — acceptable for a demo
+_gemini_key_lock = asyncio.Lock()
+
+
+async def _with_gemini_key(coro, api_key: Optional[str]):
+    """Run *coro* while temporarily setting a user-supplied Gemini API key."""
+    if not api_key:
+        return await coro
+    async with _gemini_key_lock:
+        original = os.environ.get("GOOGLE_API_KEY")
+        os.environ["GOOGLE_API_KEY"] = api_key
+        try:
+            return await coro
+        finally:
+            if original is not None:
+                os.environ["GOOGLE_API_KEY"] = original
+            else:
+                os.environ.pop("GOOGLE_API_KEY", None)
+
+
+# ---------------------------------------------------------------------------
+# Clarifying questions
+# ---------------------------------------------------------------------------
 
 @router.post("/generate-clarifying-questions", response_model=CQOutput)
-async def get_clarifying_questions(user_input: str):
-    """
-    Step 1: Frontend sends query, Backend returns clarifying questions.
-    """
+async def get_clarifying_questions(
+    user_input: str,
+    x_model_provider: str = Header(default="gemma", alias="X-Model-Provider"),
+    x_api_key: Optional[str] = Header(default=None, alias="X-Api-Key"),
+):
+    """Step 1: generate clarifying questions for a user query."""
     try:
-        print(f"Received user input for clarification: {user_input}")
-        # Placeholder for actual agent call
-        responses = await generate_clarifying_questions(user_input)
-        return responses
+        if x_model_provider == "gemma":
+            from backend.llm.gemma_pipeline import generate_cq
+            return await generate_cq(user_input)
+
+        # Gemini path
+        async def _gemini():
+            return await generate_clarifying_questions(user_input)
+
+        return await _with_gemini_key(_gemini(), x_api_key)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ---------------------------------------------------------------------------
+# Intent classifier (standalone endpoint — called only from Gemini path)
+# ---------------------------------------------------------------------------
 
 @router.get("/intent-classifier", response_model=IntentClassificationOutput)
-async def get_intent_classifier_response(session_id: str):
-    """
-    Intent classifier endpoint that retrieves clarification data from Firestore
-
-    Args:
-        session_id: Session identifier to retrieve conversation with clarification data
-
-    Returns:
-        Intent classification result including user persona, travel intent, and compromises
-    """
+async def get_intent_classifier_response(
+    session_id: str,
+    x_model_provider: str = Header(default="gemini", alias="X-Model-Provider"),
+    x_api_key: Optional[str] = Header(default=None, alias="X-Api-Key"),
+):
     try:
-        print(f"[Intent Classifier API] Received request for session_id: {session_id}")
-
-        # Initialize agent with callback
-        model_init = await get_ic_agent()
-
-        # Call agent with session_id embedded in query
-        # The callback will extract session_id and retrieve clarification data
-        # Use async generator to get response
-        agent_name, response_text = None, None
-        async for name, text in _call_agent_async(
+        async def _gemini():
+            model_init = await get_ic_agent()
+            agent_name, response_text = None, None
+            async for name, text in _call_agent_async(
                 query=f"[SESSION_ID:{session_id}]",
                 root_agent=model_init,
-                session_id=session_id
-        ):
-            agent_name, response_text = name, text
+                session_id=session_id,
+            ):
+                agent_name, response_text = name, text
 
-        response = json.loads(response_text)
+            response = json.loads(response_text)
+            response["session_id"] = session_id
+            ingestion_success = await ingest_response_firestore(
+                "intent_classifier_responses", session_id, response
+            )
+            response["db_ingestion_status"] = ingestion_success
+            return IntentClassificationOutput(**response)
 
-        # response = json.loads(response)
-        response['session_id'] = session_id
-
-        print(f"[Intent Classifier API] Successfully classified intent for session {session_id}")
-        ingestion_success = await ingest_response_firestore('intent_classifier_responses', session_id, response)
-        if ingestion_success:
-            print(f"[Intent Classifier API] Successfully ingested response for session {session_id}")
-        else:
-            print(f"[Intent Classifier API] Warning: Failed to ingest response for session {session_id}")
-
-        response['db_ingestion_success'] = ingestion_success
-        response_obj = IntentClassificationOutput(**response)
-        return response_obj
+        return await _with_gemini_key(_gemini(), x_api_key)
 
     except Exception as e:
-        print(f"[Intent Classifier API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/recommender-output", response_model=RecsysOutput)
-async def get_recommender_response(session_id: str, has_context: bool = True):
-    try:
-        print(f"[Recommender API] Received request for session_id: {session_id}")
-        if not session_id:
-            raise ValueError("Session ID is required for context-aware recommender")
-        if has_context:
-            model_init = await get_recsys_agent(has_context=True)
-            collection_name = 'context_aware_recommendations'
-        else:
-            model_init = await get_recsys_agent(has_context=False)
-            collection_name = 'baseline_recommendations'
+# ---------------------------------------------------------------------------
+# Recommender (standalone — called only from Gemini path)
+# ---------------------------------------------------------------------------
 
-        agent_name, response_text = None, None
-        async for name, text in _call_agent_async(
+@router.get("/recommender-output", response_model=RecsysOutput)
+async def get_recommender_response(
+    session_id: str,
+    has_context: bool = True,
+    x_model_provider: str = Header(default="gemini", alias="X-Model-Provider"),
+    x_api_key: Optional[str] = Header(default=None, alias="X-Api-Key"),
+):
+    try:
+        async def _gemini():
+            if has_context:
+                model_init = await get_recsys_agent(has_context=True)
+                collection_name = "context_aware_recommendations"
+            else:
+                model_init = await get_recsys_agent(has_context=False)
+                collection_name = "baseline_recommendations"
+
+            agent_name, response_text = None, None
+            async for name, text in _call_agent_async(
                 query=f"[SESSION_ID:{session_id}]",
                 root_agent=model_init,
-                session_id=session_id
-        ):
-            agent_name, response_text = name, text
+                session_id=session_id,
+            ):
+                agent_name, response_text = name, text
 
-        # Guard against empty or non-JSON responses
-        if not response_text or not response_text.strip():
-            print(f"[Recommender API] Empty response_text from agent (agent: {agent_name})")
-            raise HTTPException(status_code=502, detail="Empty response from recommendation agent")
+            if not response_text or not response_text.strip():
+                raise HTTPException(status_code=502, detail="Empty response from recommendation agent")
 
-        try:
             response = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            print(f"[Recommender API] JSON decoding error: {e}; raw response_text: {repr(response_text)}")
-            raise HTTPException(status_code=502, detail="Invalid JSON received from recommendation agent")
+            ingestion_success = await ingest_response_firestore(collection_name, session_id, response)
+            response["db_ingestion_status"] = ingestion_success
+            return RecsysOutput(**response)
 
-        ingestion_success = await ingest_response_firestore(collection_name, session_id, response)
-        if ingestion_success:
-            print(f"[Recommender API] Successfully ingested response for session {session_id}")
-        else:
-            print(f"[Recommender API] Warning: Failed to ingest response for session {session_id}")
-
-        response['db_ingestion_status'] = ingestion_success
-        response_obj = RecsysOutput(**response)
-        return response_obj
+        return await _with_gemini_key(_gemini(), x_api_key)
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[Recommender API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-@router.get("/cfe-output", response_model=CFEOutput)
-async def get_cfe_response(session_id: str):
-    """
-    CFE (Counterfactual Explanation) endpoint that combines baseline and context-aware
-    recommendations with intent classification to generate a comprehensive explanation.
-    
-    Args:
-        session_id: Session identifier to retrieve all recommendation data
-        
-    Returns:
-        CFE output with complete context including intent classification and both recommendations
-    """
-    try:
-        print(f"[CFE API] Received request for session_id: {session_id}")
-        
-        if not session_id:
-            raise ValueError("Session ID is required for CFE generation")
 
-        model_init = await get_cfe_agent()
-        # Use async generator to get response
-        agent_name, response_text = None, None
-        async for name, text in _call_agent_async(
+
+# ---------------------------------------------------------------------------
+# CFE (standalone — called only from Gemini path)
+# ---------------------------------------------------------------------------
+
+@router.get("/cfe-output", response_model=CFEOutput)
+async def get_cfe_response(
+    session_id: str,
+    x_model_provider: str = Header(default="gemini", alias="X-Model-Provider"),
+    x_api_key: Optional[str] = Header(default=None, alias="X-Api-Key"),
+):
+    try:
+        async def _gemini():
+            model_init = await get_cfe_agent()
+            agent_name, response_text = None, None
+            async for name, text in _call_agent_async(
                 query=f"[SESSION_ID:{session_id}]",
                 root_agent=model_init,
-                session_id=session_id
-        ):
-            agent_name, response_text = name, text
+                session_id=session_id,
+            ):
+                agent_name, response_text = name, text
 
-        response = json.loads(response_text)
-        ingestion_success = await ingest_response_firestore("cfe_responses", session_id, response)
-        if ingestion_success:
-            print(f"[Recommender API] Successfully ingested response for session {session_id}")
-        else:
-            print(f"[Recommender API] Warning: Failed to ingest response for session {session_id}")
+            response = json.loads(response_text)
+            ingestion_success = await ingest_response_firestore("cfe_responses", session_id, response)
+            response["db_ingestion_status"] = ingestion_success
+            return CFEOutput(**response)
 
-        response['db_ingestion_status'] = ingestion_success
-        response_obj = CFEOutput(**response)
-        return response_obj
-        
+        return await _with_gemini_key(_gemini(), x_api_key)
+
     except Exception as e:
-        print(f"[CFE API] Error: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Full pipeline (main entry point called by the frontend)
+# ---------------------------------------------------------------------------
+
 @router.get("/run-pipeline", response_model=CFEOutput)
-async def run_pipeline(session_id: str):
+async def run_pipeline(
+    session_id: str,
+    x_model_provider: str = Header(default="gemma", alias="X-Model-Provider"),
+    x_api_key: Optional[str] = Header(default=None, alias="X-Api-Key"),
+):
     try:
         start_time = time.time()
-        print(f"[Pipeline API] Received request for session_id: {session_id}")
-        model_init = await get_root_agent()
-        cfe_output = await get_model_response(
-            query=f"[USER QUERY]: {session_id}]",
-            root_agent=model_init,
-            session_id=session_id,
-            return_cfe_only=True
-        )
-        end_time = time.time()
-        if cfe_output:
-            cfe_output.time_taken_seconds = end_time - start_time
-        else:
-            raise HTTPException(status_code=404, detail="CFE response not found in pipeline")
 
-        # Ingest to Firestore
-        response_dict = cfe_output.model_dump()
-        ingestion_success = await ingest_response_firestore("cfe_pipeline_responses", session_id, response_dict)
+        if x_model_provider == "gemma":
+            from backend.llm.gemma_pipeline import run_full_pipeline as gemma_run
+            cfe_output = await gemma_run(session_id)
+            cfe_output.time_taken_seconds = time.time() - start_time
+            return cfe_output
 
-        if ingestion_success:
-            print(f"[Pipeline API] Successfully ingested CFE response for session {session_id}")
-        else:
-            print(f"[Pipeline API] Warning: Failed to ingest response for session {session_id}")
+        # Gemini path
+        async def _gemini():
+            model_init = await get_root_agent()
+            result = await get_model_response(
+                query=f"[USER QUERY]: {session_id}]",
+                root_agent=model_init,
+                session_id=session_id,
+                return_cfe_only=True,
+            )
+            if result is None:
+                raise HTTPException(status_code=404, detail="CFE response not found in pipeline")
+            result.time_taken_seconds = time.time() - start_time
 
-        cfe_output.db_ingestion_status = ingestion_success
-        return cfe_output
+            response_dict = result.model_dump()
+            ingestion_success = await ingest_response_firestore(
+                "cfe_pipeline_responses", session_id, response_dict
+            )
+            result.db_ingestion_status = ingestion_success
+            return result
+
+        return await _with_gemini_key(_gemini(), x_api_key)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[Pipeline API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/run-pipeline-all-responses")
 async def run_pipeline_all_responses(session_id: str):
-    """
-    Pipeline endpoint - runs all agents and returns all agent responses
-    Useful for debugging or monitoring the complete pipeline
-    """
     try:
-        print(f"[Pipeline All API] Received request for session_id: {session_id}")
         model_init = await get_root_agent()
-
-        # Get all responses
         all_responses = await get_model_response(
             query=f"[SESSION_ID:{session_id}]",
             root_agent=model_init,
             session_id=session_id,
-            return_cfe_only=False
+            return_cfe_only=False,
         )
-
-        return {
-            "session_id": session_id,
-            "responses": all_responses
-        }
-
+        return {"session_id": session_id, "responses": all_responses}
     except Exception as e:
-        print(f"[Pipeline All API] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

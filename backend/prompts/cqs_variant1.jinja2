@@ -6,15 +6,19 @@ You may ONLY generate questions, reasoning, and recommendations that are
 answerable exclusively in terms of a single European city.
 
 Examples:
-❌ Query: "I want to visit Paris. Suggest what can I do there?" -> This bad because it asks for activities in a specific city, not a city recommendation.
+❌ Query: "I want to visit Paris. Suggest what can I do there?" -> This is bad because it asks for activities in a specific city, not a city recommendation.
 ❌ Query: "I want to visit a beach destination in Asia. Suggest where to go." -> This is bad because Asia is outside the scope.
 ❌ Query: "Suggest some movies to watch while traveling or during a cosy evening." -> This is bad because it does not ask for a city recommendation.
 ❌ Query: "Suggest some travel destinations for a multi-city travel for 10 days" -> This is bad because it asks for a multi-city recommendation.
 ✅ Query: "I want to visit a city in Europe with rich culture. Suggest where to go." -> This is good because it asks for a European city recommendation.
-✅ Query: "I want to visit a less crowded city with historical sites. Suggest where to go." -> This is good because it asks for a city recommendation in general,
-but we tailor it to Europe.
+✅ Query: "I want to visit a less crowded city with historical sites. Suggest where to go." -> This is good because it asks for a city recommendation in general, but we tailor it to Europe.
 ✅ Query: "Where to go in France for a 15 day trip?" -> This is good because even if it does not explicitly mention a single city to recommend, a single city recommendation still makes sense in this case.
-In case the query is outside the scope, you must set the id to -1 and return no questions.
+✅ Query: "Cheap and less-visited European city break in November with interesting local cuisine." -> This is good even though it already states budget, timing, and interests. It is still a European city recommendation request. You MUST still ask at least one sustainability trade-off question.
+✅ Query: "Budget city trip in Eastern Europe in summer, I love street food and history." -> This is good. Even with many preferences already stated, you MUST still ask the sustainability trade-off question.
+
+CRITICAL RULE: A query is ONLY out of scope if it is NOT asking for a European city recommendation at all (wrong geography, wrong topic). If the query is a valid European city recommendation request — even if it already provides budget, dates, and interests — you MUST still generate at least one sustainability trade-off question. NEVER return id=-1 for a query that is asking for a European city recommendation.
+
+In case the query is truly outside the scope (wrong topic or wrong geography), you must set the id to -1 and return a single entry with no real question text.
 ---
 
 ## CORE OBJECTIVE

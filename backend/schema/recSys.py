@@ -44,16 +44,22 @@ class RecommendationContext(BaseModel):
     """
     Represents a recommendation with its explanation and trade-offs.
     """
-    recommendation: Union[str, List[str]] = Field(
-        ...,
+    recommendation: Optional[Union[str, List[str]]] = Field(
+        None,
         description="Recommended city or list of cities"
     )
     explanation: str = Field(
-        ...,
+        default="",
         description="Justification of why the recommendation fits",
-        # max_length=1000
     )
     trade_off: Optional[str] = Field(
         None,
         description="Description of any trade-offs made, if applicable"
     )
+
+    @field_validator("recommendation", mode="before")
+    @classmethod
+    def _coerce_recommendation(cls, v):
+        if v is None or v == "":
+            return None
+        return v

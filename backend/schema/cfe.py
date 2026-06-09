@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional, List, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend.schema.intentClassifier import IntentClassificationOutput
 from backend.schema.recSys import RecommendationContext
@@ -53,6 +53,13 @@ class CFEOutput(BaseModel):
         None,
         description="Alternative recommendation which was not shown to the user"
     )
+
+    @field_validator("alternative_recommendation", mode="before")
+    @classmethod
+    def _coerce_alt_recommendation(cls, v):
+        if isinstance(v, str) and v:
+            return [v]
+        return v
 
     alternative_explanation: Optional[str] = Field(
         None,

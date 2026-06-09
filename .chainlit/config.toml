@@ -88,4 +88,4 @@ custom_js = "/public/custom.js"
 #     url = "https://github.com/Chainlit/chainlit/issues"
 
 [meta]
-generated_by = "2.3.0"
+generated_by = "2.11.1"
