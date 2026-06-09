@@ -14,23 +14,22 @@ A modular Conversational Recommender System (CRS) for sustainable European city 
 
 ## 📄 Paper
 
-> **TRACE: A Transparent and Reproducible Evaluation Framework for Conversational Recommender Systems in Sustainable Tourism**  
-> Ashmi Banerjee, Miroslav Kindl, Sebastian Eilert, Wolfgang Wörndl  
+> **TRACE: A Conversational Framework for Sustainable Tourism Recommendation with Agentic Counterfactual Explanations**  
+> Ashmi Banerjee, Adithi Satish, Wolfgang Wörndl, Yashar Deldjoo  
 > *Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2026)*  
 > [arxiv.org/abs/2604.14223](https://arxiv.org/abs/2604.14223)
 
 If you use this work, please cite:
 ```bibtex
 @inproceedings{banerjee2026trace,
-  title     = {TRACE: A Transparent and Reproducible Evaluation Framework for
-               Conversational Recommender Systems in Sustainable Tourism},
-  author    = {Banerjee, Ashmi and Kindl, Miroslav and Eilert, Sebastian and W\"{o}rndl, Wolfgang},
-  booktitle = {Proceedings of the 49th International ACM SIGIR Conference on
-               Research and Development in Information Retrieval},
-  series    = {SIGIR '26},
+  author    = {Ashmi Banerjee and Adithi Satish and Wolfgang W{\"o}rndl and Yashar Deldjoo},
+  title     = {TRACE: A Conversational Framework for Sustainable Tourism Recommendation with Agentic Counterfactual Explanations},
+  booktitle = {Proceedings of the 49th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '26)},
   year      = {2026},
   publisher = {ACM},
-  url       = {https://arxiv.org/abs/2604.14223}
+  location  = {Melbourne, VIC, Australia},
+  doi       = {10.1145/3805712.3808370},
+  url       = {https://doi.org/10.1145/3805712.3808370}
 }
 ```
 
