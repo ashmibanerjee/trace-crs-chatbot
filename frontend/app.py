@@ -161,6 +161,30 @@ async def on_message(message: cl.Message):
     model_provider, api_key = _get_model_context()
     print(f"[DEBUG] Processing message | session={session_id} | provider={model_provider}")
 
+    # 0. Gemini profile — require API key before doing anything else
+    if model_provider == "gemini" and not api_key:
+        await cl.Message(
+            content=(
+                "### 🔑 Gemini API Key Required\n\n"
+                "You haven't provided a Gemini API key yet. "
+                "Please paste it below, or switch to the **Gemma (Free)** profile "
+                "which requires no key."
+            ),
+            author="Assistant",
+        ).send()
+        res = await cl.AskUserMessage(content="Paste your Gemini API key:", timeout=120).send()
+        if res and res.get("output", "").strip():
+            cl.user_session.set("_gemini_api_key", res["output"].strip())
+            await cl.Message(
+                content="✅ Key saved. Please resend your query.", author="Assistant"
+            ).send()
+        else:
+            await cl.Message(
+                content="No key provided — please try again or switch to the Gemma profile.",
+                author="Assistant",
+            ).send()
+        return
+
     # 1. Feedback text input
     if cl.user_session.get("waiting_for_feedback_text", False):
         feedback_text = message.content.strip()
