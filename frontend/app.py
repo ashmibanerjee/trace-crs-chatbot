@@ -432,15 +432,29 @@ async def on_rating_4(action: cl.Action): await handle_rating_feedback(4)
 async def on_rating_5(action: cl.Action): await handle_rating_feedback(5)
 
 
+async def _dispatch_query(query: str):
+    """Display the selected query as a user bubble, then process it."""
+    await cl.Message(content=query, author="User").send()
+    await on_message(cl.Message(content=query))
+
+
 @cl.action_callback("quick_reply")
 async def on_quick_reply(action: cl.Action):
-    val = action.payload.get("value", "")
-    await on_message(cl.Message(content=val))
+    await _dispatch_query(action.payload.get("value", ""))
 
 
+# Separate named functions — stacked @cl.action_callback decorators in
+# Chainlit 2.x wrap each other and cause the handler to fire multiple times.
 @cl.action_callback("sample_query_1")
+async def on_sample_query_1(action: cl.Action):
+    await _dispatch_query(action.payload.get("query", ""))
+
+
 @cl.action_callback("sample_query_2")
+async def on_sample_query_2(action: cl.Action):
+    await _dispatch_query(action.payload.get("query", ""))
+
+
 @cl.action_callback("sample_query_3")
-async def on_sample_query(action: cl.Action):
-    query = action.payload.get("query", "")
-    await on_message(cl.Message(content=query))
+async def on_sample_query_3(action: cl.Action):
+    await _dispatch_query(action.payload.get("query", ""))
