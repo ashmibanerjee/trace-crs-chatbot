@@ -1,8 +1,406 @@
 [
-  {"query_text": "Suggest some less-known, budget-friendly European cities with parks, historical sites, or unique attractions."},
-  {"query_text": "Looking for a less-touristy, budget-friendly Eastern European city with interesting historical sites and local experiences. Good coffee or unique cafes a plus!"},
-  {"query_text": "Cheap European city break in February."},
-  {"query_text": "I want to visit a coastal European city in summer that's not too crowded and has good public transport."},
-  {"query_text": "Recommend a green, walkable European city for a solo traveler interested in art and culture."},
-  {"query_text": "Family-friendly European city with lots of outdoor activities and affordable accommodation."}
+  {
+    "query_id": "c_p_0_pop_low_easy",
+    "query_text": "Cheap European city break in February."
+  },
+  {
+    "query_id": "c_p_0_pop_low_medium",
+    "query_text": "Suggest some less-known, budget-friendly European city with parks, historical sites, or unique attractions."
+  },
+  {
+    "query_id": "c_p_0_pop_low_hard",
+    "query_text": "Trip to a less-visited European city with historical sites and museums in July.  High budget."
+  },
+  {
+    "query_id": "c_p_0_pop_low_sustainable",
+    "query_text": "Low budget European city break in April with good air quality."
+  },
+  {
+    "query_id": "c_p_0_pop_medium_easy",
+    "query_text": "European city break in January with medium crowds."
+  },
+  {
+    "query_id": "c_p_0_pop_medium_medium",
+    "query_text": "Expensive European city break in December, not too crowded."
+  },
+  {
+    "query_id": "c_p_0_pop_medium_hard",
+    "query_text": "Suggest medium-budget European city with large trade fairs and events in August."
+  },
+  {
+    "query_id": "c_p_0_pop_high_easy",
+    "query_text": "Suggest popular European city with outdoor activities and interesting sights."
+  },
+  {
+    "query_id": "c_p_0_pop_high_medium",
+    "query_text": "Cheap Eastern European city break with live music"
+  },
+  {
+    "query_id": "c_p_0_pop_high_hard",
+    "query_text": "Best European city for a luxurious culinary experience in May."
+  },
+  {
+    "query_id": "c_p_1_pop_low_medium",
+    "query_text": "Looking for a less-crowded European city break in April with historical sights and maybe a museum."
+  },
+  {
+    "query_id": "c_p_1_pop_low_hard",
+    "query_text": "Cheap and less-visited European city break in November with interesting local cuisine."
+  },
+  {
+    "query_id": "c_p_1_pop_low_sustainable",
+    "query_text": "Suggest some off-the-beaten-path European city for walking in July on a low budget."
+  },
+  {
+    "query_id": "c_p_1_pop_medium_easy",
+    "query_text": "Suggest a mid-range European city break with interesting food options."
+  },
+  {
+    "query_id": "c_p_1_pop_medium_medium",
+    "query_text": "Medium budget European city break with parks and historical sights."
+  },
+  {
+    "query_id": "c_p_1_pop_medium_hard",
+    "query_text": "High budget European city break in October with outdoor activities."
+  },
+  {
+    "query_id": "c_p_1_pop_high_sustainable",
+    "query_text": "Walkable European city break in April with good nightlife."
+  },
+  {
+    "query_id": "c_p_2_pop_low_hard",
+    "query_text": "Suggest a medium budget European city break destination with nightlife and sailing opportunities in October.  Preferably less crowded."
+  },
+  {
+    "query_id": "c_p_2_pop_medium_easy",
+    "query_text": "Suggest some moderately popular European cities for a budget traveler."
+  },
+  {
+    "query_id": "c_p_2_pop_medium_hard",
+    "query_text": "High budget European city break in July with interesting museums and good nightlife."
+  },
+  {
+    "query_id": "c_p_2_pop_medium_sustainable",
+    "query_text": "European city break in September with good air quality for sightseeing and nightlife."
+  },
+  {
+    "query_id": "c_p_2_pop_high_easy",
+    "query_text": "Where can I travel in Europe during the low season in February?"
+  },
+  {
+    "query_id": "c_p_2_pop_high_hard",
+    "query_text": "Cheap January city break in Europe with museums and nightlife"
+  },
+  {
+    "query_id": "c_p_3_pop_low_sustainable",
+    "query_text": "Cheap European city break in January with interesting historical sites."
+  },
+  {
+    "query_id": "c_p_3_pop_medium_medium",
+    "query_text": "Looking for a less-touristy, budget-friendly Eastern European city with interesting historical sites and local experiences.  Good coffee or unique cafes a plus!"
+  },
+  {
+    "query_id": "c_p_3_pop_medium_hard",
+    "query_text": "Looking for a less crowded, high-budget European city break in March with good food and drink options."
+  },
+  {
+    "query_id": "c_p_3_pop_medium_sustainable",
+    "query_text": "European city break in April with good air quality and fewer crowds.  Interested in historical sites, unique museums, and local markets."
+  },
+  {
+    "query_id": "c_p_4_pop_medium_medium",
+    "query_text": "Cheap European city break with quirky museums and lively nightlife"
+  },
+  {
+    "query_id": "c_p_4_pop_medium_sustainable",
+    "query_text": "European city break in August with good air quality and interesting museums."
+  },
+  {
+    "query_id": "c_p_5_pop_low_easy",
+    "query_text": "Recommend unpopular European city with museums, pubs, and unique nightlife."
+  },
+  {
+    "query_id": "c_p_5_pop_low_sustainable",
+    "query_text": "Suggest less popular European city, easily walkable, good to visit in April, with nightlife options."
+  },
+  {
+    "query_id": "c_p_5_pop_medium_hard",
+    "query_text": "High-budget European city break in November with interesting sights and things to do."
+  },
+  {
+    "query_id": "c_p_5_pop_high_sustainable",
+    "query_text": "Budget-friendly European city break in February with clean air and fewer crowds."
+  },
+  {
+    "query_id": "c_p_6_pop_low_hard",
+    "query_text": "Suggest a less-known, moderately priced European city break destination with historical attractions, suitable for travel in November."
+  },
+  {
+    "query_id": "c_p_6_pop_low_sustainable",
+    "query_text": "European city break in May with good air quality, less crowded, maybe a park or nature."
+  },
+  {
+    "query_id": "c_p_6_pop_medium_hard",
+    "query_text": "Cheap Eastern European city break in June with quirky bars and historical sights"
+  },
+  {
+    "query_id": "c_p_6_pop_high_hard",
+    "query_text": "High budget European city break in September with lively nightlife."
+  },
+  {
+    "query_id": "c_p_6_pop_high_sustainable",
+    "query_text": "Medium budget European city break with good air quality and interesting architecture."
+  },
+  {
+    "query_id": "c_p_7_pop_low_easy",
+    "query_text": "Cheap and less touristy city break in Europe."
+  },
+  {
+    "query_id": "c_p_7_pop_low_hard",
+    "query_text": "Trip to Europe in May with a large budget, featuring natural scenery like waterfalls or a lake, plus a museum or historical site."
+  },
+  {
+    "query_id": "c_p_7_pop_low_sustainable",
+    "query_text": "Suggest a less-crowded European city with clean air for an April trip. I'd like options with historical sites, museums, or unique dining experiences."
+  },
+  {
+    "query_id": "c_p_7_pop_medium_hard",
+    "query_text": "Cheap European city break in November with interesting things to see and do."
+  },
+  {
+    "query_id": "c_p_8_pop_medium_easy",
+    "query_text": "Good places to swim outdoors in Europe"
+  },
+  {
+    "query_id": "c_p_8_pop_medium_sustainable",
+    "query_text": "Low budget European city break with great air quality and interesting parks."
+  },
+  {
+    "query_id": "c_p_9_pop_low_easy",
+    "query_text": "Suggest unpopular European city with museums, historical sites, or unique local cuisine."
+  },
+  {
+    "query_id": "c_p_9_pop_medium_sustainable",
+    "query_text": "Walkable European city break in June with interesting museums and good pubs."
+  },
+  {
+    "query_id": "c_p_9_pop_high_hard",
+    "query_text": "Medium budget European city break in October with interesting historical architecture."
+  },
+  {
+    "query_id": "c_p_10_pop_low_medium",
+    "query_text": "Suggest a less popular European city to visit in August with museums, nightlife, and transportation options."
+  },
+  {
+    "query_id": "c_p_10_pop_low_sustainable",
+    "query_text": "European city break in April, low popularity, good air quality, historical sites or museums."
+  },
+  {
+    "query_id": "c_p_11_pop_medium_medium",
+    "query_text": "Find a European city with live music venues and historical sites."
+  },
+  {
+    "query_id": "c_p_11_pop_medium_sustainable",
+    "query_text": "Suggest a low-budget, walkable European city break in April."
+  },
+  {
+    "query_id": "c_p_11_pop_high_sustainable",
+    "query_text": "Cheap European city break in December with interesting bookstores or historical attractions."
+  },
+  {
+    "query_id": "c_p_12_pop_low_sustainable",
+    "query_text": "European city break in July, walkable, less touristy."
+  },
+  {
+    "query_id": "c_p_13_pop_medium_sustainable",
+    "query_text": "Walkable European city with museums and good nightlife. High budget."
+  },
+  {
+    "query_id": "c_p_14_pop_low_hard",
+    "query_text": "European city break in March with higher budget, off the beaten track, good for nightlife."
+  },
+  {
+    "query_id": "c_p_15_pop_medium_medium",
+    "query_text": "Find medium-popularity European cities with things to do and see in July."
+  },
+  {
+    "query_id": "c_p_17_pop_medium_sustainable",
+    "query_text": "Cheap European city break in December with good nightlife"
+  },
+  {
+    "query_id": "c_p_17_pop_high_sustainable",
+    "query_text": "Medium budget city break in October with good air quality and decent popularity."
+  },
+  {
+    "query_id": "c_p_18_pop_medium_sustainable",
+    "query_text": "Suggest some less popular European city with good air quality for a cheap trip in March."
+  },
+  {
+    "query_id": "c_p_18_pop_high_sustainable",
+    "query_text": "Good air quality European city break in May with nightlife and museums."
+  },
+  {
+    "query_id": "c_p_19_pop_medium_sustainable",
+    "query_text": "High-budget European city break in October.  Suggest less popular destinations."
+  },
+  {
+    "query_id": "c_p_21_pop_medium_sustainable",
+    "query_text": "Trip to a European city with great air quality and high budget in April.  Medium tourist season preferred."
+  },
+  {
+    "query_id": "c_p_22_pop_high_sustainable",
+    "query_text": "Suggest a popular European city with great air quality for a trip in October."
+  },
+  {
+    "query_id": "c_p_24_pop_low_sustainable",
+    "query_text": "Suggest a less-known walkable European city to visit in October with medium season."
+  },
+  {
+    "query_id": "c_p_25_pop_low_hard",
+    "query_text": "Low budget European city break in June with unique bars and historical sights."
+  },
+  {
+    "query_id": "c_p_27_pop_low_sustainable",
+    "query_text": "Suggest a less popular European city with good air quality for a trip in July where I can enjoy a few drinks at night."
+  },
+  {
+    "query_id": "c_p_28_pop_medium_sustainable",
+    "query_text": "Looking for a medium-popularity European city with good air quality for a February trip.  Bonus points for parks and outdoor activities."
+  },
+  {
+    "query_id": "c_p_29_pop_medium_sustainable",
+    "query_text": "Medium budget European city break in April with fewer crowds."
+  },
+  {
+    "query_id": "c_p_31_pop_low_sustainable",
+    "query_text": "Cheap European city break in November with unique food experiences"
+  },
+  {
+    "query_id": "c_p_33_pop_high_sustainable",
+    "query_text": "Looking for a popular, budget-friendly, and walkable European city with interesting things to see and do."
+  },
+  {
+    "query_id": "c_p_38_pop_low_sustainable",
+    "query_text": "October trip to a less-touristy European coastal city with good nightlife."
+  },
+  {
+    "query_id": "c_p_38_pop_high_sustainable",
+    "query_text": "Cheap European city break in April with interesting historical sites and quirky bars."
+  },
+  {
+    "query_id": "c_p_44_pop_low_sustainable",
+    "query_text": "Cheap European city break in December with unique attractions"
+  },
+  {
+    "query_id": "c_p_49_pop_high_sustainable",
+    "query_text": "Where can I find a cheap European city break in October with interesting historical sites or cultural events?"
+  },
+  {
+    "query_id": "c_p_51_pop_low_sustainable",
+    "query_text": "Cheap and walkable European city with WWII history or a vibrant nightlife scene."
+  },
+  {
+    "query_id": "c_p_51_pop_medium_sustainable",
+    "query_text": "Low budget European city break in February with good air quality."
+  },
+  {
+    "query_id": "c_p_51_pop_high_sustainable",
+    "query_text": "Low budget European city break with good air quality and cinema."
+  },
+  {
+    "query_id": "c_p_52_pop_medium_sustainable",
+    "query_text": "May city break in Europe with coastal walks, outdoor pools and diving."
+  },
+  {
+    "query_id": "c_p_54_pop_low_sustainable",
+    "query_text": "Cheap European city break in November with interesting sights"
+  },
+  {
+    "query_id": "c_p_56_pop_high_sustainable",
+    "query_text": "Looking for a popular European city break destination with fewer crowds in October.  Interested in cultural experiences, historical sites, or unique food and drink options."
+  },
+  {
+    "query_id": "c_p_57_pop_medium_sustainable",
+    "query_text": "I'm looking for a medium-popularity European city destination with low season in June. I'm interested in sports venues, particularly stadiums, and some art and cultural attractions like museums and exhibition centers."
+  },
+  {
+    "query_id": "c_p_61_pop_high_sustainable",
+    "query_text": "Medium budget European city break in April with good availability."
+  },
+  {
+    "query_id": "c_p_68_pop_medium_sustainable",
+    "query_text": "Budget-friendly European city break in April."
+  },
+  {
+    "query_id": "c_p_73_pop_high_sustainable",
+    "query_text": "Popular and expensive European city break in April."
+  },
+  {
+    "query_id": "c_p_81_pop_medium_sustainable",
+    "query_text": "Cheap European city break in October with interesting museums."
+  },
+  {
+    "query_id": "c_p_88_pop_high_sustainable",
+    "query_text": "Lively nightlife and cultural attractions in a European city with great air quality."
+  },
+  {
+    "query_id": "c_p_97_pop_low_sustainable",
+    "query_text": "Suggest a low-popularity, walkable European city for January travel with interesting historical sites or nature activities."
+  },
+  {
+    "query_id": "c_p_104_pop_medium_sustainable",
+    "query_text": "Looking for a medium-popularity European city with low season in June and a mix of fast food and upscale dining options.  Bonus if there are interesting monuments and gardens."
+  },
+  {
+    "query_id": "c_p_128_pop_low_sustainable",
+    "query_text": "Looking for a low-budget, walkable European city with off-the-beaten-path options.  Preferably with parks, historical sites, or interesting architecture."
+  },
+  {
+    "query_id": "c_p_133_pop_low_sustainable",
+    "query_text": "Cheap and less-crowded European city break in November."
+  },
+  {
+    "query_id": "c_p_141_pop_medium_sustainable",
+    "query_text": "Suggest a European city with great air quality and outdoor activities like hiking or enjoying nature."
+  },
+  {
+    "query_id": "c_p_142_pop_medium_sustainable",
+    "query_text": "Budget-friendly European city break in June with fewer crowds."
+  },
+  {
+    "query_id": "c_p_150_pop_medium_sustainable",
+    "query_text": "Cheap European city break in November with quirky/unusual things to see/do."
+  },
+  {
+    "query_id": "c_p_155_pop_medium_sustainable",
+    "query_text": "High-budget European city break in April.  Suggest less popular destinations."
+  },
+  {
+    "query_id": "c_p_156_pop_high_sustainable",
+    "query_text": "Cheap European city break in November with museums and nightlife."
+  },
+  {
+    "query_id": "c_p_180_pop_low_sustainable",
+    "query_text": "Suggest some less-known, walkable, budget-friendly European cities with interesting cultural or religious sites and unique experiences."
+  },
+  {
+    "query_id": "c_p_183_pop_low_sustainable",
+    "query_text": "Looking for a low-budget, walkable city in Europe with unique culinary experiences and off-the-beaten-path charm."
+  },
+  {
+    "query_id": "c_p_191_pop_medium_sustainable",
+    "query_text": "Cheap December city break in Europe with live music"
+  },
+  {
+    "query_id": "c_p_191_pop_high_sustainable",
+    "query_text": "Popular and expensive European city break in October."
+  },
+  {
+    "query_id": "c_p_196_pop_medium_sustainable",
+    "query_text": "Suggest a medium-popularity, high-budget European city with excellent air quality and interesting historical or cultural attractions."
+  },
+  {
+    "query_id": "c_p_196_pop_high_sustainable",
+    "query_text": "Cheap European city break in October with museums and nightlife."
+  }
 ]
