@@ -54,6 +54,9 @@ async def _call_agent_async(query: str, root_agent: Agent = None, session_id: st
 
     async for event in events:
         if event.is_final_response():
+            if event.content is None or not event.content.parts:
+                error_msg = getattr(event, 'error_message', None) or "Agent returned no content (possible API key or quota error)"
+                raise RuntimeError(error_msg)
             final_response = event.content.parts[0].text
             yield event.author, final_response
 

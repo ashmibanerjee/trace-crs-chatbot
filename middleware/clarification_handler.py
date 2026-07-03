@@ -77,20 +77,37 @@ class ClarificationState:
 _gemini_key_lock = asyncio.Lock()
 
 
+_VERTEXAI_ENV_VARS = (
+    "GOOGLE_GENAI_USE_VERTEXAI",
+    "GOOGLE_GENAI_USE_ENTERPRISE",
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_CLOUD_LOCATION",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+)
+
+
 async def _with_gemini_key(coro, api_key: Optional[str]):
-    """Run *coro* with a temporarily swapped GOOGLE_API_KEY (Gemini user-key path)."""
+    """Run *coro* using a user-supplied Gemini API key.
+
+    Temporarily sets GOOGLE_API_KEY and clears any Vertex AI env vars so that
+    google-genai uses Gemini API key auth instead of Vertex AI credentials.
+    """
     if not api_key:
         return await coro
     async with _gemini_key_lock:
-        original = os.environ.get("GOOGLE_API_KEY")
+        orig_api_key = os.environ.get("GOOGLE_API_KEY")
+        orig_vertexai = {k: os.environ.pop(k, None) for k in _VERTEXAI_ENV_VARS}
         os.environ["GOOGLE_API_KEY"] = api_key
         try:
             return await coro
         finally:
-            if original is not None:
-                os.environ["GOOGLE_API_KEY"] = original
+            if orig_api_key is not None:
+                os.environ["GOOGLE_API_KEY"] = orig_api_key
             else:
                 os.environ.pop("GOOGLE_API_KEY", None)
+            for k, v in orig_vertexai.items():
+                if v is not None:
+                    os.environ[k] = v
 
 
 class ClarificationHandler:
@@ -141,6 +158,10 @@ class ClarificationHandler:
             import traceback
             print(f"[ClarificationHandler] Error generating questions: {e}")
             traceback.print_exc()
+            # Re-raise API/auth errors so the caller can show the user a real error
+            # message rather than silently treating it as out-of-scope.
+            if model_provider == "gemini":
+                raise
             return None
 
     def format_question_for_ui(self, state: ClarificationState) -> Dict[str, Any]:

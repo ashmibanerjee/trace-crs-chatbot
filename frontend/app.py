@@ -110,6 +110,9 @@ Right now, I specialize in city destinations only within Europe.
 > 💡 *Please be patient—analysis may take a few minutes to ensure quality recommendations.*
 
 ---
+> 🔬 **Reproducing the paper demo?** This app has migrated to HF Spaces after a security vulnerability in an earlier Chainlit version compromised stored credentials. The **Gemini (Your Key)** profile uses the exact ADK multi-agent pipeline from the paper — select it at the top and bring your own [Google AI Studio API key](https://aistudio.google.com/apikey) (free tier available). The **Gemma (Free)** profile requires no key.
+
+---
 **Ready to start? Try one of these examples or ask your own question:**
 """
 

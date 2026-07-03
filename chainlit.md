@@ -22,3 +22,11 @@ Right now, I specialize in city destinations only within Europe.
 - _"Cheap European city break in February."_ 
 
 Your queries can be as vague or specific as you want! Our system will handle the rest 😉
+
+---
+
+### ℹ️ About this deployment
+
+This app runs on **Hugging Face Spaces**. The original backend (Google Cloud Run + Chainlit 2.3.0) was taken offline after a security vulnerability in Chainlit 2.3.0 compromised stored credentials. This version uses Chainlit 2.11.1 (patched) and no longer stores any API credentials server-side.
+
+As a result, the **Gemini profile now uses a Bring Your Own Key (BYOK) policy** — you paste your own [Google AI Studio API key](https://aistudio.google.com/apikey) at the start of a session. The key is kept only in session memory and is never logged or stored. The **Gemma (Free) profile** requires no key at all.
